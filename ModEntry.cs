@@ -7,8 +7,8 @@ namespace MultiplayerCutsceneNotification
 {
     internal sealed class ModEntry : Mod
     {
-        private readonly HashSet<long> _eventLoggedForPlayers = new();
-        private bool _isCutsceneActive = false;
+        private readonly HashSet<long> _initiatorIds = new();
+        private bool _isCutsceneActive;
 
         public override void Entry(IModHelper helper)
         {
@@ -25,7 +25,7 @@ namespace MultiplayerCutsceneNotification
 
                 long playerId = initiator.UniqueMultiplayerID;
 
-                if (!_eventLoggedForPlayers.Contains(playerId) &&
+                if (!_initiatorIds.Contains(playerId) &&
                     Game1.CurrentEvent.eventCommands.Contains("skippable"))
                 {
                     string playerName = initiator.Name;
@@ -34,17 +34,24 @@ namespace MultiplayerCutsceneNotification
                     Monitor.Log(message, LogLevel.Info);
                     Game1.chatBox.addMessage(message, Color.Gold);
 
-                    _eventLoggedForPlayers.Add(playerId);
+                    _initiatorIds.Add(playerId);
 
                     _isCutsceneActive = true;
                 }
             }
             else if (_isCutsceneActive &&
-                     _eventLoggedForPlayers.Contains(Game1.player.UniqueMultiplayerID) &&
+                     _initiatorIds.Contains(Game1.player.UniqueMultiplayerID) &&
                      Game1.CurrentEvent == null)
             {
-                _eventLoggedForPlayers.Remove(Game1.player.UniqueMultiplayerID);
-                _isCutsceneActive = false;
+                _initiatorIds.Remove(Game1.player.UniqueMultiplayerID);
+
+                if (_initiatorIds.Count == 0)
+                    _isCutsceneActive = false;
+
+                string message = $"{Game1.player.Name} has finished a cutscene!";
+
+                Monitor.Log(message, LogLevel.Info);
+                Game1.chatBox.addMessage(message, Color.Gold);
             }
         }
     }
