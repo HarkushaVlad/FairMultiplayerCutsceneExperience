@@ -1,0 +1,10 @@
+{
+  "Name": "MultiplayerCutsceneNotification",
+  "Author": "Reprodudix",
+  "Version": "1.0.0",
+  "Description": "Sends notifications when a player starts a cutscene.",
+  "UniqueID": "Reprodudix.MultiplayerCutsceneNotification",
+  "EntryDll": "MultiplayerCutsceneNotification.dll",
+  "MinimumApiVersion": "4.1.0",
+  "UpdateKeys": []
+}
