@@ -16,13 +16,13 @@ active, movement is blocked for other players. During this downtime, they can pl
 ## Dependencies
 
 To ensure that in-game time does not progress during cutscenes, the mod requires
-the [Pause in Multiplayer](https://www.nexusmods.com/stardewvalley/mods/21327?tab=files) mod. This functionality may be
+the [Pause in Multiplayer](https://www.nexusmods.com/stardewvalley/mods/21327) mod. This functionality may be
 integrated into this mod in future updates.
 
 ## Installation
 
 1. Install the latest version of [SMAPI](https://smapi.io/).
-2. Download the mod from the [releases page](https://github.com/your-repo-link/releases).
+2. Download the mod from the [releases page](https://github.com/HarkushaVlad/MultiplayerCutsceneNotification/releases).
 3. Extract the downloaded `.zip` file into your `Mods` folder.
 4. Run the game using SMAPI.
 
