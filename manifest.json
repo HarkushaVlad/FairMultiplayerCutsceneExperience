@@ -1,10 +1,10 @@
 {
-  "Name": "MultiplayerCutsceneNotification",
+  "Name": "FairMultiplayerCutsceneExperience",
   "Author": "Reprodudix",
   "Version": "1.0.0",
-  "Description": "Notifies players about cutscenes, blocking others' movement during the scene and offering a mini-game while they wait.",
-  "UniqueID": "Reprodudix.MultiplayerCutsceneNotification",
-  "EntryDll": "MultiplayerCutsceneNotification.dll",
+  "Description": "Blocks player movement during cutscenes in multiplayer, ensuring a fair experience for all.",
+  "UniqueID": "Reprodudix.FairMultiplayerCutsceneExperience",
+  "EntryDll": "FairMultiplayerCutsceneExperience.dll",
   "UpdateKeys": [],
   "Dependencies": [
     {

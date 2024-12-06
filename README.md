@@ -1,33 +1,41 @@
-# Multiplayer Cutscene Notification
+# Fair Multiplayer Cutscene Experience
 
-A **Stardew Valley mod** that notifies all players when someone starts or finishes a cutscene. While the cutscene is
-active, movement is blocked for other players. During this downtime, they can play a mini-game instead of waiting idly.
+A **Stardew Valley mod** that adds functionality to multiplayer by notifying all players when a cutscene starts or ends.
+During the cutscene, movement for all other players is blocked, and they are given the opportunity to play a mini-game (
+Junimo Cart) while waiting.
 
-## How It Works
+This mod ensures players can enjoy cutscenes in multiplayer without worrying about in-game time progressing or other
+players continuing to play while time is frozen, which could give them an unfair advantage. While
+the [Pause in Multiplayer](https://www.nexusmods.com/stardewvalley/mods/21327) mod pauses time during cutscenes, it
+doesn't block other players from moving or interacting with the game. This mod solves that by preventing movement and
+offering a mini-game to keep waiting players engaged.
 
-- When a player initiates a cutscene:
-    - A notification is sent to the chat.
-    - Movement is blocked for all other players.
-    - A mini-game(Junimo cart) is automatically opened for the waiting players.
-- When the cutscene ends:
-    - Another notification is sent.
-    - The mini-game closes, and movement resumes.
+## Install
+
+1. Install the latest version of [SMAPI](https://smapi.io).
+2. Download the mod from the [releases page](https://github.com/HarkushaVlad/MultiplayerCutsceneNotification/releases)
+   and unzip it into your `Stardew Valley/Mods` folder.
+3. Download and unzip the required mod [Pause in Multiplayer](https://www.nexusmods.com/stardewvalley/mods/21327).
+4. Run the game using SMAPI.
+
+## How to Use
+
+This mod will automatically notify players when a cutscene is triggered by another player. When a cutscene starts, other
+players will be unable to move and will be prompted to play a mini-game. When the cutscene ends, the mini-game will
+close, and player movement will resume.
+
+To use this mod, simply play in multiplayer and participate in any cutscene. There's no need for additional actions to
+trigger the mini-game or notifications.
 
 ## Dependencies
 
-To ensure that in-game time does not progress during cutscenes, the mod requires
-the [Pause in Multiplayer](https://www.nexusmods.com/stardewvalley/mods/21327) mod. This functionality may be
-integrated into this mod in future updates.
+This mod requires the [Pause in Multiplayer](https://www.nexusmods.com/stardewvalley/mods/21327) mod to ensure that
+in-game time is paused during cutscenes. Without this mod, time will continue to progress during cutscenes, which could
+cause issues with gameplay.
 
-## Installation
-
-1. Install the latest version of [SMAPI](https://smapi.io/).
-2. Download the mod from the [releases page](https://github.com/HarkushaVlad/MultiplayerCutsceneNotification/releases).
-3. Extract the downloaded `.zip` file into your `Mods` folder.
-4. Run the game using SMAPI.
+In future updates, we plan to integrate the time pause functionality directly into this mod, removing the need for the
+external dependency.
 
 ## Compatibility
 
-- **Game Version**: Compatible with Stardew Valley 1.6 and later.
-- **Multiplayer**: Designed specifically for multiplayer mode.
-- **Platforms**: Windows, macOS, and Linux.
+- Works with *Stardew Valley* 1.6 and later on Windows, macOS, and Linux.

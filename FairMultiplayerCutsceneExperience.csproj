@@ -19,6 +19,9 @@
       <Reference Include="StardewModdingAPI">
         <HintPath>..\..\..\..\Games\SteamLibrary\steamapps\common\Stardew Valley\StardewModdingAPI.dll</HintPath>
       </Reference>
+      <Reference Include="StardewValley.GameData">
+        <HintPath>..\..\..\..\Games\SteamLibrary\steamapps\common\Stardew Valley\StardewValley.GameData.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

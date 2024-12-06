@@ -4,7 +4,7 @@ using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Minigames;
 
-namespace MultiplayerCutsceneNotification
+namespace FairMultiplayerCutsceneExperience
 {
     internal sealed class ModEntry : Mod
     {
@@ -103,6 +103,7 @@ namespace MultiplayerCutsceneNotification
 
         private void CloseMinigame()
         {
+            Game1.currentMinigame.forceQuit();
             Game1.currentMinigame = null;
         }
 

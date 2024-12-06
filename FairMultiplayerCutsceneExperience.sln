@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiplayerCutsceneNotification", "MultiplayerCutsceneNotification.csproj", "{2E0427F8-2DDA-43EB-BA39-99E49589A77C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairMultiplayerCutsceneExperience", "FairMultiplayerCutsceneExperience.csproj", "{2E0427F8-2DDA-43EB-BA39-99E49589A77C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
