@@ -13,7 +13,7 @@ offering a mini-game to keep waiting players engaged.
 ## Install
 
 1. Install the latest version of [SMAPI](https://smapi.io).
-2. Download the mod from the [releases page](https://github.com/HarkushaVlad/MultiplayerCutsceneNotification/releases)
+2. Download the mod from the [releases page](https://github.com/HarkushaVlad/MultiplayerCutsceneNotification/releases) or [Nexus](https://www.nexusmods.com/stardewvalley/mods/29913/)
    and unzip it into your `Stardew Valley/Mods` folder.
 3. Download and unzip the required mod [Pause in Multiplayer](https://www.nexusmods.com/stardewvalley/mods/21327).
 4. Run the game using SMAPI.
