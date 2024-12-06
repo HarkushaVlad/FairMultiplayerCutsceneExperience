@@ -5,7 +5,9 @@
   "Description": "Blocks player movement during cutscenes in multiplayer, ensuring a fair experience for all.",
   "UniqueID": "Reprodudix.FairMultiplayerCutsceneExperience",
   "EntryDll": "FairMultiplayerCutsceneExperience.dll",
-  "UpdateKeys": [],
+  "UpdateKeys": [
+    "Nexus:29913"
+  ],
   "Dependencies": [
     {
       "UniqueID": "mishmaash.PauseInMultiplayer"
