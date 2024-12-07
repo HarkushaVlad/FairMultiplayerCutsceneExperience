@@ -20,9 +20,9 @@ offering a mini-game to keep waiting players engaged.
 
 ## How to Use
 
-This mod will automatically notify players when a cutscene is triggered by another player. When a cutscene starts, other
-players will be unable to move and will be prompted to play a mini-game. When the cutscene ends, the mini-game will
-close, and player movement will resume.
+All players must have this mod installed for it to function correctly in multiplayer. This mod will automatically notify
+players when a cutscene is triggered by another player. When a cutscene starts, other players will be unable to move and
+will be prompted to play a mini-game. When the cutscene ends, the mini-game will close, and player movement will resume.
 
 To use this mod, simply play in multiplayer and participate in any cutscene. There's no need for additional actions to
 trigger the mini-game or notifications.
