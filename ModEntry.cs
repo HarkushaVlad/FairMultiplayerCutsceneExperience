@@ -210,7 +210,7 @@ namespace FairMultiplayerCutsceneExperience
 
             public override void draw(SpriteBatch spriteBatch)
             {
-                DrawBackground(spriteBatch);
+                DrawBackground();
                 int currentYPosition = yPositionOnScreen + Game1.tileSize;
                 currentYPosition = DrawPauseMessage(spriteBatch, currentYPosition);
                 currentYPosition = DrawPlayerMessage(spriteBatch, currentYPosition);
@@ -218,7 +218,7 @@ namespace FairMultiplayerCutsceneExperience
                 base.draw(spriteBatch);
             }
 
-            private void DrawBackground(SpriteBatch spriteBatch)
+            private void DrawBackground()
             {
                 Game1.drawDialogueBox(xPositionOnScreen, yPositionOnScreen, width, height, false, true);
             }
@@ -278,7 +278,7 @@ namespace FairMultiplayerCutsceneExperience
                     drawMouse(spriteBatch, false, Game1.cursor_grab);
 
                     drawHoverText(spriteBatch, junimoKartButton.hoverText, Game1.dialogueFont);
-                    HandleButtonClick(junimoKartButton);
+                    HandleButtonClick();
                 }
                 else
                 {
@@ -287,7 +287,7 @@ namespace FairMultiplayerCutsceneExperience
                 }
             }
 
-            private void HandleButtonClick(ClickableTextureComponent button)
+            private void HandleButtonClick()
             {
                 if (Game1.input.GetMouseState().LeftButton == ButtonState.Pressed &&
                     _previousLeftButtonState == ButtonState.Released)
