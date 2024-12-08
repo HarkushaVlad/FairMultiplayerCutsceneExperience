@@ -195,18 +195,36 @@ namespace FairMultiplayerCutsceneExperience
 
         private class PauseMenu : IClickableMenu
         {
-            private readonly string _initiatorPlayerName;
+            private const string WaitMessage = "While you wait for the cutscene to finish:";
+            private const int MenuWidth = Game1.tileSize * 17;
+            private const int HeightWithoutPlayerLines = Game1.tileSize * 7;
+
+            private readonly List<string> _messageLines;
             private ClickableTextureComponent? _junimoKartButton;
 
             public PauseMenu(string initiatorPlayerName)
                 : base(
-                    (Game1.viewport.Width - Game1.tileSize * 17) / 2,
-                    (Game1.viewport.Height - Game1.tileSize * 7) / 2,
-                    Game1.tileSize * 17,
-                    Game1.tileSize * 7
+                    (Game1.uiViewport.Width - MenuWidth) / 2,
+                    (Game1.uiViewport.Height - CalculateMenuHeight(initiatorPlayerName)) / 2,
+                    MenuWidth,
+                    CalculateMenuHeight(initiatorPlayerName)
                 )
             {
-                _initiatorPlayerName = initiatorPlayerName;
+                string playerMessage = GetPlayerMessage(initiatorPlayerName);
+                _messageLines = WrapText(playerMessage, width - Game1.tileSize * 2);
+            }
+
+            private static int CalculateMenuHeight(string initiatorPlayerName)
+            {
+                string playerMessage = GetPlayerMessage(initiatorPlayerName);
+                return HeightWithoutPlayerLines +
+                       Game1.tileSize * (WrapText(playerMessage, MenuWidth - Game1.tileSize * 2).Count - 1);
+            }
+
+            private static string GetPlayerMessage(string initiatorPlayerName)
+            {
+                return
+                    $"{(initiatorPlayerName.Length > 0 ? initiatorPlayerName : "Player")} is currently in a cutscene!";
             }
 
             public override void draw(SpriteBatch spriteBatch)
@@ -240,18 +258,13 @@ namespace FairMultiplayerCutsceneExperience
             {
                 int messageX = xPositionOnScreen + Game1.tileSize;
 
-                string playerMessage =
-                    $"{(_initiatorPlayerName.Length > 0 ? _initiatorPlayerName : "Player")} is currently in a cutscene!";
-                List<string> wrappedMessageLines = WrapText(playerMessage, width - Game1.tileSize * 2);
-
-                foreach (string line in wrappedMessageLines)
+                foreach (string line in _messageLines)
                 {
                     SpriteText.drawString(spriteBatch, line, messageX, startY);
                     startY += Game1.tileSize;
                 }
 
-                string waitMessage = "While you wait for the cutscene to finish:";
-                SpriteText.drawString(spriteBatch, waitMessage, messageX, startY);
+                SpriteText.drawString(spriteBatch, WaitMessage, messageX, startY);
 
                 return startY + Game1.tileSize;
             }
@@ -317,7 +330,7 @@ namespace FairMultiplayerCutsceneExperience
 
                 if (_junimoKartButton != null &&
                     currentlySnappedComponent == _junimoKartButton &&
-                    (b is Buttons.A or Buttons.X))
+                    b == Buttons.A)
                 {
                     Game1.playSound("coin");
                     OpenMinigame();
