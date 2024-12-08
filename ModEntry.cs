@@ -101,24 +101,6 @@ namespace FairMultiplayerCutsceneExperience
             }
         }
 
-        private static void StartPause()
-        {
-            Game1.activeClickableMenu = new PauseMenu(Game1.getOnlineFarmers()
-                .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name);
-        }
-
-        private static void OpenMinigame()
-        {
-            Game1.currentMinigame = new MineCart(new Random().Next(0, 9), 3);
-        }
-
-        private static void EndPause()
-        {
-            Game1.currentMinigame?.forceQuit();
-            Game1.currentMinigame = null;
-            Game1.activeClickableMenu = null;
-        }
-
         private void BroadcastMessage(string message)
         {
             Monitor.Log(message, LogLevel.Info);
@@ -171,6 +153,25 @@ namespace FairMultiplayerCutsceneExperience
             );
         }
 
+        private static void StartPause()
+        {
+            Game1.activeClickableMenu = new PauseMenu(Game1.getOnlineFarmers()
+                .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name);
+        }
+
+        private static void EndPause()
+        {
+            Game1.currentMinigame?.forceQuit();
+            Game1.currentMinigame = null;
+            Game1.activeClickableMenu = null;
+        }
+
+        private static void OpenMinigame()
+        {
+            Game1.currentMinigame = new MineCart(new Random().Next(0, 9), 3);
+        }
+
+
         private bool IsPlayerInCutscene(long playerId)
         {
             return CutsceneInitiators.Contains(playerId);
@@ -183,9 +184,9 @@ namespace FairMultiplayerCutsceneExperience
 
         private class PauseMenu : IClickableMenu
         {
-            private readonly string _playerName;
+            private readonly string _initiatorPlayerName;
 
-            public PauseMenu(string playerName)
+            public PauseMenu(string initiatorPlayerName)
                 : base(
                     (Game1.viewport.Width - Game1.tileSize * 17) / 2,
                     (Game1.viewport.Height - Game1.tileSize * 7) / 2,
@@ -193,42 +194,62 @@ namespace FairMultiplayerCutsceneExperience
                     Game1.tileSize * 7
                 )
             {
-                _playerName = playerName;
+                _initiatorPlayerName = initiatorPlayerName;
             }
 
-            public override void draw(SpriteBatch b)
+            public override void draw(SpriteBatch spriteBatch)
+            {
+                DrawBackground(spriteBatch);
+                int currentYPosition = yPositionOnScreen + Game1.tileSize;
+                currentYPosition = DrawPauseMessage(spriteBatch, currentYPosition);
+                currentYPosition = DrawPlayerMessage(spriteBatch, currentYPosition);
+                DrawJunimoKartButton(spriteBatch, currentYPosition);
+                base.draw(spriteBatch);
+            }
+
+            private void DrawBackground(SpriteBatch spriteBatch)
             {
                 Game1.drawDialogueBox(xPositionOnScreen, yPositionOnScreen, width, height, false, true);
+            }
 
+            private int DrawPauseMessage(SpriteBatch spriteBatch, int startY)
+            {
                 SpriteText.drawStringWithScrollCenteredAt(
-                    b,
+                    spriteBatch,
                     "Game Paused",
                     xPositionOnScreen + width / 2,
-                    yPositionOnScreen + Game1.tileSize / 2);
+                    startY
+                );
 
-                int lineXPosition = xPositionOnScreen + Game1.tileSize;
+                return startY + Game1.tileSize;
+            }
+
+            private int DrawPlayerMessage(SpriteBatch spriteBatch, int startY)
+            {
+                int messageX = xPositionOnScreen + Game1.tileSize;
+
                 string playerMessage =
-                    $"{(_playerName.Length > 0 ? _playerName : "Player")} is currently in a cutscene!";
-                int firstLineYPosition = yPositionOnScreen + Game1.tileSize * 2;
+                    $"{(_initiatorPlayerName.Length > 0 ? _initiatorPlayerName : "Player")} is currently in a cutscene!";
+                List<string> wrappedMessageLines = WrapText(playerMessage, width - Game1.tileSize * 2);
 
-                List<string> playerMessageLines = WrapText(playerMessage, width - Game1.tileSize * 2);
-                for (int i = 0; i < playerMessageLines.Count; i++)
+                foreach (string line in wrappedMessageLines)
                 {
-                    SpriteText.drawString(b, playerMessageLines[i], lineXPosition,
-                        firstLineYPosition + i * Game1.tileSize);
+                    SpriteText.drawString(spriteBatch, line, messageX, startY);
+                    startY += Game1.tileSize;
                 }
 
                 string waitMessage = "While you wait for the cutscene to finish:";
-                int secondLineYPosition = firstLineYPosition + playerMessageLines.Count * Game1.tileSize;
-                SpriteText.drawString(b, waitMessage, lineXPosition, secondLineYPosition);
+                SpriteText.drawString(spriteBatch, waitMessage, messageX, startY);
 
-                ClickableTextureComponent junimoKartButton = new ClickableTextureComponent(
-                    new Rectangle(
-                        xPositionOnScreen + width / 2 - Game1.tileSize / 2,
-                        secondLineYPosition + Game1.tileSize,
-                        Game1.tileSize,
-                        Game1.tileSize * 2
-                    ),
+                return startY + Game1.tileSize;
+            }
+
+            private void DrawJunimoKartButton(SpriteBatch spriteBatch, int buttonY)
+            {
+                int buttonX = xPositionOnScreen + width / 2 - Game1.tileSize / 2;
+
+                var junimoKartButton = new ClickableTextureComponent(
+                    new Rectangle(buttonX, buttonY, Game1.tileSize, Game1.tileSize * 2),
                     Game1.content.Load<Texture2D>("TileSheets/Craftables"),
                     new Rectangle(112, 608, 16, 32),
                     4f,
@@ -238,36 +259,38 @@ namespace FairMultiplayerCutsceneExperience
                     hoverText = "Play Junimo Kart"
                 };
 
-                junimoKartButton.draw(b);
+                junimoKartButton.draw(spriteBatch);
 
                 if (junimoKartButton.containsPoint(Game1.getMouseX(), Game1.getMouseY()))
                 {
-                    Game1.mouseCursor = Game1.cursor_gamepad_pointer;
-                    drawMouse(b, false, Game1.cursor_gamepad_pointer);
-
-                    drawHoverText(b, junimoKartButton.hoverText, Game1.dialogueFont);
-
-                    if (Game1.input.GetMouseState().LeftButton == ButtonState.Pressed &&
-                        _previousLeftButtonState == ButtonState.Released)
-                    {
-                        Game1.playSound("coin");
-                        OpenMinigame();
-                        _previousLeftButtonState = ButtonState.Pressed;
-                        exitThisMenuNoSound();
-                    }
-
-                    if (Game1.input.GetMouseState().LeftButton == ButtonState.Released)
-                    {
-                        _previousLeftButtonState = ButtonState.Released;
-                    }
+                    Game1.mouseCursor = Game1.cursor_grab;
+                    drawMouse(spriteBatch, false, Game1.cursor_grab);
+                    
+                    drawHoverText(spriteBatch, junimoKartButton.hoverText, Game1.dialogueFont);
+                    HandleButtonClick(junimoKartButton);
                 }
                 else
                 {
                     Game1.mouseCursor = Game1.cursor_default;
-                    drawMouse(b, false, Game1.cursor_default);
+                    drawMouse(spriteBatch, false, Game1.cursor_default);
+                }
+            }
+
+            private void HandleButtonClick(ClickableTextureComponent button)
+            {
+                if (Game1.input.GetMouseState().LeftButton == ButtonState.Pressed &&
+                    _previousLeftButtonState == ButtonState.Released)
+                {
+                    Game1.playSound("coin");
+                    OpenMinigame();
+                    _previousLeftButtonState = ButtonState.Pressed;
+                    exitThisMenuNoSound();
                 }
 
-                base.draw(b);
+                if (Game1.input.GetMouseState().LeftButton == ButtonState.Released)
+                {
+                    _previousLeftButtonState = ButtonState.Released;
+                }
             }
         }
 
