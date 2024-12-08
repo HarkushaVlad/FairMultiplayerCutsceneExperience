@@ -26,6 +26,7 @@ namespace FairMultiplayerCutsceneExperience
             helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
             helper.Events.Display.RenderingHud += OnRenderingHud;
             helper.Events.Multiplayer.ModMessageReceived += OnModMessageReceived;
+            helper.Events.Multiplayer.PeerDisconnected += OnPeerDisconnected;
         }
 
         private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
@@ -61,6 +62,16 @@ namespace FairMultiplayerCutsceneExperience
 
                 string message = $"{Game1.player.Name} has finished a cutscene!";
                 BroadcastMessage(message);
+            }
+        }
+
+        private void OnPeerDisconnected(object? sender, PeerDisconnectedEventArgs e)
+        {
+            if (CutsceneInitiators.Contains(e.Peer.PlayerID))
+            {
+                CutsceneInitiators.Remove(e.Peer.PlayerID);
+                SendRemoveInitiatorMessageToAll(e.Peer.PlayerID);
+                SendCloseMinigameMessageToAll();
             }
         }
 
@@ -265,7 +276,7 @@ namespace FairMultiplayerCutsceneExperience
                 {
                     Game1.mouseCursor = Game1.cursor_grab;
                     drawMouse(spriteBatch, false, Game1.cursor_grab);
-                    
+
                     drawHoverText(spriteBatch, junimoKartButton.hoverText, Game1.dialogueFont);
                     HandleButtonClick(junimoKartButton);
                 }
