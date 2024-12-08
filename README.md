@@ -40,4 +40,5 @@ external dependency.
 
 ## Compatibility
 
+- Supports both online multiplayer and split-screen co-op modes.
 - Works with *Stardew Valley* 1.6 and later on Windows, macOS, and Linux.
