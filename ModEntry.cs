@@ -196,6 +196,7 @@ namespace FairMultiplayerCutsceneExperience
         private class PauseMenu : IClickableMenu
         {
             private readonly string _initiatorPlayerName;
+            private ClickableTextureComponent? _junimoKartButton;
 
             public PauseMenu(string initiatorPlayerName)
                 : base(
@@ -259,7 +260,7 @@ namespace FairMultiplayerCutsceneExperience
             {
                 int buttonX = xPositionOnScreen + width / 2 - Game1.tileSize / 2;
 
-                var junimoKartButton = new ClickableTextureComponent(
+                _junimoKartButton = new ClickableTextureComponent(
                     new Rectangle(buttonX, buttonY, Game1.tileSize, Game1.tileSize * 2),
                     Game1.content.Load<Texture2D>("TileSheets/Craftables"),
                     new Rectangle(112, 608, 16, 32),
@@ -270,20 +271,26 @@ namespace FairMultiplayerCutsceneExperience
                     hoverText = "Play Junimo Kart"
                 };
 
-                junimoKartButton.draw(spriteBatch);
+                _junimoKartButton.draw(spriteBatch);
 
-                if (junimoKartButton.containsPoint(Game1.getMouseX(), Game1.getMouseY()))
+                if (_junimoKartButton.containsPoint(Game1.getMouseX(), Game1.getMouseY()))
                 {
                     Game1.mouseCursor = Game1.cursor_grab;
                     drawMouse(spriteBatch, false, Game1.cursor_grab);
 
-                    drawHoverText(spriteBatch, junimoKartButton.hoverText, Game1.dialogueFont);
+                    drawHoverText(spriteBatch, _junimoKartButton.hoverText, Game1.dialogueFont);
                     HandleButtonClick();
                 }
                 else
                 {
                     Game1.mouseCursor = Game1.cursor_default;
                     drawMouse(spriteBatch, false, Game1.cursor_default);
+                }
+
+                if (Game1.input.GetGamePadState().IsConnected)
+                {
+                    currentlySnappedComponent = _junimoKartButton;
+                    snapCursorToCurrentSnappedComponent();
                 }
             }
 
@@ -301,6 +308,22 @@ namespace FairMultiplayerCutsceneExperience
                 if (Game1.input.GetMouseState().LeftButton == ButtonState.Released)
                 {
                     _previousLeftButtonState = ButtonState.Released;
+                }
+            }
+
+            public override void receiveGamePadButton(Buttons b)
+            {
+                base.receiveGamePadButton(b);
+
+                if (_junimoKartButton != null &&
+                    currentlySnappedComponent == _junimoKartButton &&
+                    (b is Buttons.A or Buttons.X))
+                {
+                    Game1.playSound("coin");
+                    OpenMinigame();
+                    exitThisMenuNoSound();
+                    currentlySnappedComponent = null;
+                    _junimoKartButton = null;
                 }
             }
         }
