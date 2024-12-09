@@ -177,11 +177,15 @@ namespace FairMultiplayerCutsceneExperience
             Game1.activeClickableMenu = null;
         }
 
-        private static void OpenMinigame()
+        private static void OpenJunimoCartMinigame()
         {
             Game1.currentMinigame = new MineCart(new Random().Next(0, 9), 3);
         }
 
+        private static void OpenPrairieKingMinigame()
+        {
+            Game1.currentMinigame = new AbigailGame();
+        }
 
         private bool IsPlayerInCutscene(long playerId)
         {
@@ -200,6 +204,8 @@ namespace FairMultiplayerCutsceneExperience
             private const int HeightWithoutPlayerLines = Game1.tileSize * 7;
 
             private readonly List<string> _messageLines;
+            private readonly List<ClickableComponent> _menuButtons = new();
+            private ClickableTextureComponent? _prairieKingButton;
             private ClickableTextureComponent? _junimoKartButton;
 
             public PauseMenu(string initiatorPlayerName)
@@ -234,6 +240,8 @@ namespace FairMultiplayerCutsceneExperience
                 currentYPosition = DrawPauseMessage(spriteBatch, currentYPosition);
                 currentYPosition = DrawPlayerMessage(spriteBatch, currentYPosition);
                 DrawJunimoKartButton(spriteBatch, currentYPosition);
+                DrawPrairieKingButton(spriteBatch, currentYPosition);
+                HandleCursorType(spriteBatch);
                 base.draw(spriteBatch);
             }
 
@@ -271,7 +279,7 @@ namespace FairMultiplayerCutsceneExperience
 
             private void DrawJunimoKartButton(SpriteBatch spriteBatch, int buttonY)
             {
-                int buttonX = xPositionOnScreen + width / 2 - Game1.tileSize / 2;
+                int buttonX = xPositionOnScreen + width / 2 + Game1.tileSize / 2;
 
                 _junimoKartButton = new ClickableTextureComponent(
                     new Rectangle(buttonX, buttonY, Game1.tileSize, Game1.tileSize * 2),
@@ -284,36 +292,77 @@ namespace FairMultiplayerCutsceneExperience
                     hoverText = "Play Junimo Kart"
                 };
 
+                _junimoKartButton.name = "Junimo Kart Button";
+                _junimoKartButton.myID = 1;
+
+                _menuButtons.Add(_junimoKartButton);
+
                 _junimoKartButton.draw(spriteBatch);
 
                 if (_junimoKartButton.containsPoint(Game1.getMouseX(), Game1.getMouseY()))
                 {
-                    Game1.mouseCursor = Game1.cursor_grab;
-                    drawMouse(spriteBatch, false, Game1.cursor_grab);
-
                     drawHoverText(spriteBatch, _junimoKartButton.hoverText, Game1.dialogueFont);
-                    HandleButtonClick();
+                    HandleButtonClick(OpenJunimoCartMinigame);
+                }
+            }
+
+            private void DrawPrairieKingButton(SpriteBatch spriteBatch, int buttonY)
+            {
+                int buttonX = xPositionOnScreen + width / 2 - Game1.tileSize - Game1.tileSize / 2;
+
+                _prairieKingButton = new ClickableTextureComponent(
+                    new Rectangle(buttonX, buttonY, Game1.tileSize, Game1.tileSize * 2),
+                    Game1.content.Load<Texture2D>("TileSheets/Craftables"),
+                    new Rectangle(80, 544, 16, 32),
+                    4f,
+                    true
+                )
+                {
+                    hoverText = "Play Journey of The Prairie King"
+                };
+
+                _prairieKingButton.name = "Prairie King Button";
+                _prairieKingButton.myID = 0;
+
+                _prairieKingButton.draw(spriteBatch);
+
+                _menuButtons.Add(_prairieKingButton);
+
+                if (_prairieKingButton.containsPoint(Game1.getMouseX(), Game1.getMouseY()))
+                {
+                    drawHoverText(spriteBatch, _prairieKingButton.hoverText, Game1.dialogueFont);
+                    HandleButtonClick(OpenPrairieKingMinigame);
+                }
+            }
+
+            private void HandleCursorType(SpriteBatch spriteBatch)
+            {
+                bool isPrairieKingButtonHovered = _prairieKingButton != null &&
+                                                  _prairieKingButton.containsPoint(Game1.getMouseX(),
+                                                      Game1.getMouseY());
+
+                bool isJunimoKartButton = _junimoKartButton != null &&
+                                          _junimoKartButton.containsPoint(Game1.getMouseX(), Game1.getMouseY());
+
+                if (isPrairieKingButtonHovered || isJunimoKartButton)
+                {
+                    Game1.mouseCursor = Game1.cursor_gamepad_pointer;
+                    drawMouse(spriteBatch, false, Game1.cursor_gamepad_pointer);
                 }
                 else
                 {
                     Game1.mouseCursor = Game1.cursor_default;
                     drawMouse(spriteBatch, false, Game1.cursor_default);
                 }
-
-                if (Game1.input.GetGamePadState().IsConnected)
-                {
-                    currentlySnappedComponent = _junimoKartButton;
-                    snapCursorToCurrentSnappedComponent();
-                }
             }
 
-            private void HandleButtonClick()
+            private void HandleButtonClick(Action openMinigame)
             {
                 if (Game1.input.GetMouseState().LeftButton == ButtonState.Pressed &&
                     _previousLeftButtonState == ButtonState.Released)
                 {
                     Game1.playSound("coin");
-                    OpenMinigame();
+                    openMinigame();
                     _previousLeftButtonState = ButtonState.Pressed;
                     exitThisMenuNoSound();
                 }
@@ -328,15 +377,48 @@ namespace FairMultiplayerCutsceneExperience
             {
                 base.receiveGamePadButton(b);
 
+                if ((b == Buttons.DPadRight || b == Buttons.DPadLeft || b == Buttons.DPadUp || b == Buttons.DPadDown) &&
+                    _menuButtons.Count > 0)
+                {
+                    if (currentlySnappedComponent == null)
+                    {
+                        currentlySnappedComponent = _menuButtons.First();
+                        return;
+                    }
+
+                    if (b == Buttons.DPadUp || b == Buttons.DPadDown)
+                    {
+                        snapCursorToCurrentSnappedComponent();
+                        return;
+                    }
+
+                    int currentIndex = _menuButtons.IndexOf(currentlySnappedComponent);
+
+                    int nextIndex = (currentIndex + (b == Buttons.DPadRight ? 1 : -1) + _menuButtons.Count) %
+                                    _menuButtons.Count;
+
+                    currentlySnappedComponent = _menuButtons[nextIndex];
+                }
+
                 if (_junimoKartButton != null &&
-                    currentlySnappedComponent == _junimoKartButton &&
+                    currentlySnappedComponent.myID == _junimoKartButton.myID &&
                     b == Buttons.A)
                 {
                     Game1.playSound("coin");
-                    OpenMinigame();
+                    OpenJunimoCartMinigame();
                     exitThisMenuNoSound();
                     currentlySnappedComponent = null;
                     _junimoKartButton = null;
+                }
+                else if (_prairieKingButton != null &&
+                         currentlySnappedComponent.myID == _prairieKingButton.myID &&
+                         b == Buttons.A)
+                {
+                    Game1.playSound("coin");
+                    OpenPrairieKingMinigame();
+                    exitThisMenuNoSound();
+                    currentlySnappedComponent = null;
+                    _prairieKingButton = null;
                 }
             }
         }
