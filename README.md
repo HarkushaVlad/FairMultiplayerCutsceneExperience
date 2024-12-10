@@ -1,9 +1,9 @@
 # Fair Multiplayer Cutscene Experience
 
 A **Stardew Valley** mod that adds multiplayer notifications to inform players when one of them starts a cutscene. It
-also
-blocks the movement of all other players by opening a pause menu where they can choose a mini-game to wait for the
-cutscene to finish. Once the cutscene ends, the menu will automatically close, and the game will continue.
+also blocks the movement of all other players by opening a pause menu where they can choose a mini-game and see helpful
+tips while waiting for the cutscene to finish. Once the cutscene ends, the menu will automatically close, and the game
+will continue.
 
 This mod ensures that players can enjoy cutscenes in multiplayer without worrying about other players' progress, as time
 continues to pass during the cutscene, which could be considered unfair.
