@@ -48,7 +48,7 @@ namespace FairMultiplayerCutsceneExperience
                 if (!IsPlayerInCutscene(playerId) &&
                     Game1.CurrentEvent.eventCommands.Contains("skippable"))
                 {
-                    string message = $"{initiator.Name} has started a cutscene!";
+                    string message = Helper.Translation.Get("message.startCutscene", new { initiator.name });
                     BroadcastMessage(message);
 
                     CutsceneInitiators.Add(playerId);
@@ -66,7 +66,7 @@ namespace FairMultiplayerCutsceneExperience
                 CutsceneInitiators.Remove(Game1.player.UniqueMultiplayerID);
                 SendRemoveInitiatorMessageToAll(Game1.player.UniqueMultiplayerID);
 
-                string message = $"{Game1.player.Name} has finished a cutscene!";
+                string message = Helper.Translation.Get("message.finishCutscene", new { Game1.player.name });
                 BroadcastMessage(message);
             }
         }
@@ -99,17 +99,19 @@ namespace FairMultiplayerCutsceneExperience
 
             if (peerMod == null)
             {
-                BroadcastMessage($"[{ModManifest.Name}] The player {peerName} does not have the mod installed. " +
-                                 "For correct functionality, all players must have the mod installed.", true);
+                string message = $"[{ModManifest.Name}] " +
+                                 Helper.Translation.Get("message.noMod", new { name = peerName });
+                BroadcastMessage(message, true);
                 return;
             }
 
             if (peerMod?.Version.ToString() != _hostModVersion)
             {
-                BroadcastMessage(
-                    $"[{ModManifest.Name}] The player {peerName} has mod version {peerMod?.Version.ToString()} when the Host mod is {_hostModVersion}. " +
-                    "For correct functionality, the mod versions must match for all players.",
-                    true);
+                string message = $"[{ModManifest.Name}] " + Helper.Translation.Get(
+                    "message.modVersionMismatch",
+                    new { name = peerName, modVersion = peerMod?.Version.ToString(), hostModVersion = _hostModVersion }
+                );
+                BroadcastMessage(message, true);
             }
         }
 
@@ -218,13 +220,15 @@ namespace FairMultiplayerCutsceneExperience
             );
         }
 
-        private static void StartPause()
+        private void StartPause()
         {
-            Game1.activeClickableMenu = new PauseMenu(Game1.getOnlineFarmers()
-                .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name);
+            string initiatorName = Game1.getOnlineFarmers()
+                .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name;
+            string tip = Helper.Translation.Get($"tips.tip{new Random().Next(1, 37)}");
+            Game1.activeClickableMenu = new PauseMenu(Helper, initiatorName, tip);
         }
 
-        private static void EndPause()
+        private void EndPause()
         {
             Game1.currentMinigame?.unload();
             Game1.currentMinigame = null;
@@ -253,37 +257,58 @@ namespace FairMultiplayerCutsceneExperience
 
         private class PauseMenu : IClickableMenu
         {
-            private const string WaitMessage = "While you wait for the cutscene to finish:";
             private const int MenuWidth = Game1.tileSize * 17;
-            private const int HeightWithoutPlayerLines = Game1.tileSize * 7;
+            private const int HeightWithoutPlayerLines = Game1.tileSize * 9 + Game1.tileSize / 2;
 
+            private readonly IModHelper _helper;
             private readonly List<string> _messageLines;
+            private readonly List<string> _tipLines;
             private ClickableTextureComponent? _prairieKingButton;
             private ClickableTextureComponent? _junimoKartButton;
 
-            public PauseMenu(string initiatorPlayerName)
+            public PauseMenu(IModHelper helper, string initiatorPlayerName, string tipMessage)
                 : base(
                     (Game1.uiViewport.Width - MenuWidth) / 2,
-                    (Game1.uiViewport.Height - CalculateMenuHeight(initiatorPlayerName)) / 2,
+                    (Game1.uiViewport.Height - CalculateMenuHeight(new[]
+                        {
+                            initiatorPlayerName
+                        },
+                        new[] { tipMessage })) / 2,
                     MenuWidth,
-                    CalculateMenuHeight(initiatorPlayerName)
+                    CalculateMenuHeight(new[] { initiatorPlayerName }, new[] { tipMessage })
                 )
             {
+                _helper = helper;
                 string playerMessage = GetPlayerMessage(initiatorPlayerName);
                 _messageLines = WrapText(playerMessage, width - Game1.tileSize * 2);
+                _tipLines = WrapText(tipMessage, width);
             }
 
-            private static int CalculateMenuHeight(string initiatorPlayerName)
+            private static int CalculateMenuHeight(string[] spriteMessages, string[] smallMessages)
             {
-                string playerMessage = GetPlayerMessage(initiatorPlayerName);
-                return HeightWithoutPlayerLines +
-                       Game1.tileSize * (WrapText(playerMessage, MenuWidth - Game1.tileSize * 2).Count - 1);
+                int height = HeightWithoutPlayerLines;
+
+                foreach (string message in spriteMessages)
+                {
+                    height += Game1.tileSize * (WrapText(message, MenuWidth - Game1.tileSize * 2).Count - 1);
+                }
+
+                foreach (string message in smallMessages)
+                {
+                    height += Game1.tileSize / 2 * (WrapText(message, MenuWidth).Count - 1);
+                }
+
+                return height;
             }
 
-            private static string GetPlayerMessage(string initiatorPlayerName)
+
+            private string GetPlayerMessage(string initiatorPlayerName)
             {
-                return
-                    $"{(initiatorPlayerName.Length > 0 ? initiatorPlayerName : "Player")} is currently in a cutscene!";
+                string playerName = initiatorPlayerName.Length > 0
+                    ? initiatorPlayerName
+                    : _helper.Translation.Get($"menu.player");
+
+                return $" {_helper.Translation.Get($"menu.inCutscene", new { name = playerName })}";
             }
 
             public override void draw(SpriteBatch spriteBatch)
@@ -294,6 +319,7 @@ namespace FairMultiplayerCutsceneExperience
                 currentYPosition = DrawPlayerMessage(spriteBatch, currentYPosition);
                 DrawJunimoKartButton(spriteBatch, currentYPosition);
                 DrawPrairieKingButton(spriteBatch, currentYPosition);
+                DrawTip(spriteBatch, currentYPosition + Game1.tileSize * 3);
                 HandleCursorType(spriteBatch);
                 base.draw(spriteBatch);
             }
@@ -307,12 +333,12 @@ namespace FairMultiplayerCutsceneExperience
             {
                 SpriteText.drawStringWithScrollCenteredAt(
                     spriteBatch,
-                    "Game Paused",
+                    _helper.Translation.Get($"menu.title"),
                     xPositionOnScreen + width / 2,
                     startY
                 );
 
-                return startY + Game1.tileSize;
+                return startY + Game1.tileSize + Game1.tileSize / 2;
             }
 
             private int DrawPlayerMessage(SpriteBatch spriteBatch, int startY)
@@ -325,9 +351,9 @@ namespace FairMultiplayerCutsceneExperience
                     startY += Game1.tileSize;
                 }
 
-                SpriteText.drawString(spriteBatch, WaitMessage, messageX, startY);
+                SpriteText.drawString(spriteBatch, _helper.Translation.Get("menu.whileWait"), messageX, startY);
 
-                return startY + Game1.tileSize;
+                return startY + Game1.tileSize + Game1.tileSize / 2;
             }
 
             private void DrawPrairieKingButton(SpriteBatch spriteBatch, int buttonY)
@@ -342,7 +368,7 @@ namespace FairMultiplayerCutsceneExperience
                     true
                 )
                 {
-                    hoverText = "Play Journey of The Prairie King"
+                    hoverText = _helper.Translation.Get($"menu.playPrairieKing")
                 };
 
                 _prairieKingButton.name = "Prairie King Button";
@@ -369,7 +395,7 @@ namespace FairMultiplayerCutsceneExperience
                     true
                 )
                 {
-                    hoverText = "Play Junimo Kart"
+                    hoverText = _helper.Translation.Get($"menu.playJunimoKart")
                 };
 
                 _junimoKartButton.name = "Junimo Kart Button";
@@ -381,6 +407,16 @@ namespace FairMultiplayerCutsceneExperience
                 {
                     drawHoverText(spriteBatch, _junimoKartButton.hoverText, Game1.dialogueFont);
                     HandleButtonClick(OpenJunimoCartMinigame);
+                }
+            }
+
+            private void DrawTip(SpriteBatch spriteBatch, int tipY)
+            {
+                foreach (string line in _tipLines)
+                {
+                    int tipX = xPositionOnScreen + (width / 2) - (int)(Game1.smallFont.MeasureString(line).X / 2);
+                    spriteBatch.DrawString(Game1.smallFont, line, new Vector2(tipX, tipY), Color.Black);
+                    tipY += Game1.tileSize / 2;
                 }
             }
 
