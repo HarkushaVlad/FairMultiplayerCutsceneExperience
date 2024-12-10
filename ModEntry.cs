@@ -20,12 +20,15 @@ namespace FairMultiplayerCutsceneExperience
 
         private static ButtonState _previousLeftButtonState = ButtonState.Released;
         private static readonly HashSet<long> CutsceneInitiators = new();
+        private static string? _hostModVersion;
 
         public override void Entry(IModHelper helper)
         {
             helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
             helper.Events.Display.RenderingHud += OnRenderingHud;
             helper.Events.Multiplayer.ModMessageReceived += OnModMessageReceived;
+            helper.Events.GameLoop.DayStarted += OnDayStarted;
+            helper.Events.Multiplayer.PeerConnected += OnPeerConnected;
             helper.Events.Multiplayer.PeerDisconnected += OnPeerDisconnected;
         }
 
@@ -68,6 +71,49 @@ namespace FairMultiplayerCutsceneExperience
             }
         }
 
+        private void OnDayStarted(object? sender, DayStartedEventArgs e)
+        {
+            if (Game1.player.UniqueMultiplayerID == Game1.MasterPlayer.UniqueMultiplayerID)
+            {
+                _hostModVersion = ModManifest.Version.ToString();
+            }
+        }
+
+        private void OnPeerConnected(object? sender, PeerConnectedEventArgs e)
+        {
+            var peer = e.Peer;
+            var peerName = Game1.getOnlineFarmers().ToList()
+                .Find(farmer => farmer.UniqueMultiplayerID == peer.PlayerID)?.Name;
+            var peerMod = peer.Mods.FirstOrDefault(mod => mod.ID == ModManifest.UniqueID);
+
+            if (peer.IsHost)
+            {
+                _hostModVersion = peerMod?.Version.ToString();
+                return;
+            }
+
+            if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
+                return;
+
+            Thread.Sleep(5000);
+
+            if (peerMod == null)
+            {
+                BroadcastMessage($"[{ModManifest.Name}] The player {peerName} does not have the mod installed. " +
+                                 "For correct functionality, all players must have the mod installed.", true);
+                return;
+            }
+
+            if (peerMod?.Version.ToString() != _hostModVersion)
+            {
+                BroadcastMessage(
+                    $"[{ModManifest.Name}] The player {peerName} has mod version {peerMod?.Version.ToString()} when the Host mod is {_hostModVersion}. " +
+                    "For correct functionality, the mod versions must match for all players.",
+                    true);
+            }
+        }
+
+
         private void OnPeerDisconnected(object? sender, PeerDisconnectedEventArgs e)
         {
             if (CutsceneInitiators.Contains(e.Peer.PlayerID))
@@ -85,7 +131,9 @@ namespace FairMultiplayerCutsceneExperience
                 switch (e.Type)
                 {
                     case MessageTypeSendChatMessage:
-                        Game1.chatBox.addMessage(e.ReadAs<string>(), Color.Gold);
+                        var messageTuple = e.ReadAs<(string, bool)>();
+                        Monitor.Log(messageTuple.Item1, messageTuple.Item2 ? LogLevel.Warn : LogLevel.Info);
+                        Game1.chatBox.addMessage(messageTuple.Item1, messageTuple.Item2 ? Color.Orange : Color.Gold);
                         break;
                     case MessageTypeStartPause:
                         if (!IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
@@ -118,17 +166,17 @@ namespace FairMultiplayerCutsceneExperience
             }
         }
 
-        private void BroadcastMessage(string message)
+        private void BroadcastMessage(string message, bool isWarning = false)
         {
-            Monitor.Log(message, LogLevel.Info);
-            Game1.chatBox.addMessage(message, Color.Gold);
-            SendChatMessageToAll(message);
+            Monitor.Log(message, isWarning ? LogLevel.Warn : LogLevel.Info);
+            Game1.chatBox.addMessage(message, isWarning ? Color.Orange : Color.Gold);
+            SendChatMessageToAll(message, isWarning);
         }
 
-        private void SendChatMessageToAll(string message)
+        private void SendChatMessageToAll(string message, bool isError = false)
         {
             Helper.Multiplayer.SendMessage(
-                message: message,
+                message: (message, isError),
                 messageType: MessageTypeSendChatMessage,
                 modIDs: new[] { ModManifest.UniqueID }
             );
