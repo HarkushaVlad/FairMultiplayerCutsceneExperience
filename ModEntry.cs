@@ -20,6 +20,7 @@ namespace FairMultiplayerCutsceneExperience
         private static ButtonState _previousLeftButtonState = ButtonState.Released;
         private static readonly HashSet<long> CutsceneInitiators = new();
         private static string? _hostModVersion;
+        private static string? _currTip;
 
         public override void Entry(IModHelper helper)
         {
@@ -228,8 +229,9 @@ namespace FairMultiplayerCutsceneExperience
         {
             string initiatorName = Game1.getOnlineFarmers()
                 .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name;
-            string tip = Helper.Translation.Get($"tips.tip{new Random().Next(1, 37)}");
-            Game1.activeClickableMenu = new PauseMenu(Helper, initiatorName, tip);
+            if (String.IsNullOrEmpty(_currTip))
+                _currTip = Helper.Translation.Get($"tips.tip{new Random().Next(1, 37)}");
+            Game1.activeClickableMenu = new PauseMenu(Helper, initiatorName, _currTip);
         }
 
         private void EndPause()
@@ -237,6 +239,7 @@ namespace FairMultiplayerCutsceneExperience
             Game1.currentMinigame?.unload();
             Game1.currentMinigame = null;
             Game1.activeClickableMenu = null;
+            _currTip = null;
         }
 
         private static void OpenJunimoCartMinigame()
