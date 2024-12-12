@@ -14,9 +14,8 @@ namespace FairMultiplayerCutsceneExperience
     {
         private const string MessageTypeSendChatMessage = "sendChatMessage";
         private const string MessageTypeStartPause = "startPause";
+        private const string MessageTypeSpecificStartPause = "specificStartPause";
         private const string MessageTypeEndPause = "endPause";
-        private const string MessageTypeAddPlayerToInitiators = "addPlayerToInitiators";
-        private const string MessageTypeRemovePlayerFromInitiators = "removePlayerFromInitiators";
 
         private static ButtonState _previousLeftButtonState = ButtonState.Released;
         private static readonly HashSet<long> CutsceneInitiators = new();
@@ -52,19 +51,17 @@ namespace FairMultiplayerCutsceneExperience
                     BroadcastMessage(message);
 
                     CutsceneInitiators.Add(playerId);
-                    SendAddInitiatorMessageToAll(playerId);
 
-                    SendOpenMinigameMessageToAll();
+                    SendStartPauseMessageToAll(playerId);
                 }
             }
             else if (IsCutsceneActive() &&
                      IsPlayerInCutscene(Game1.player.UniqueMultiplayerID) &&
                      Game1.CurrentEvent == null)
             {
-                SendCloseMinigameMessageToAll();
+                SendEndPauseMessageToAll(Game1.player.UniqueMultiplayerID);
 
                 CutsceneInitiators.Remove(Game1.player.UniqueMultiplayerID);
-                SendRemoveInitiatorMessageToAll(Game1.player.UniqueMultiplayerID);
 
                 string message = Helper.Translation.Get("message.finishCutscene", new { Game1.player.name });
                 BroadcastMessage(message);
@@ -95,7 +92,14 @@ namespace FairMultiplayerCutsceneExperience
             if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
                 return;
 
-            Thread.Sleep(5000);
+            Thread.Sleep(3000);
+
+            if (
+                IsCutsceneActive() &&
+                !IsPlayerInCutscene(e.Peer.PlayerID))
+            {
+                SendSpecificStartPauseMessage(e.Peer.PlayerID, CutsceneInitiators.ToArray()[0]);
+            }
 
             if (peerMod == null)
             {
@@ -121,8 +125,7 @@ namespace FairMultiplayerCutsceneExperience
             if (CutsceneInitiators.Contains(e.Peer.PlayerID))
             {
                 CutsceneInitiators.Remove(e.Peer.PlayerID);
-                SendRemoveInitiatorMessageToAll(e.Peer.PlayerID);
-                SendCloseMinigameMessageToAll();
+                SendEndPauseMessageToAll(e.Peer.PlayerID);
             }
         }
 
@@ -138,18 +141,28 @@ namespace FairMultiplayerCutsceneExperience
                         Game1.chatBox.addMessage(messageTuple.Item1, messageTuple.Item2 ? Color.Orange : Color.Gold);
                         break;
                     case MessageTypeStartPause:
+                        CutsceneInitiators.Add(e.ReadAs<long>());
                         if (!IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
                             StartPause();
                         break;
+                    case MessageTypeSpecificStartPause:
+                        var playerIds = e.ReadAs<(long, long)>();
+                        if (Game1.player.UniqueMultiplayerID == playerIds.Item1)
+                        {
+                            var initiatorName = Game1.otherFarmers.ToList()
+                                .Find(farmer => farmer.Key == playerIds.Item2).Value.name;
+                            Game1.chatBox.addMessage(
+                                Helper.Translation.Get("message.startCutscene",
+                                    new { name = initiatorName.ToString() }), Color.Gold);
+                            CutsceneInitiators.Add(playerIds.Item2);
+                            StartPause();
+                        }
+
+                        break;
                     case MessageTypeEndPause:
+                        CutsceneInitiators.Remove(e.ReadAs<long>());
                         if (!IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
                             EndPause();
-                        break;
-                    case MessageTypeAddPlayerToInitiators:
-                        CutsceneInitiators.Add(e.ReadAs<long>());
-                        break;
-                    case MessageTypeRemovePlayerFromInitiators:
-                        CutsceneInitiators.Remove(e.ReadAs<long>());
                         break;
                 }
             }
@@ -184,38 +197,29 @@ namespace FairMultiplayerCutsceneExperience
             );
         }
 
-        private void SendOpenMinigameMessageToAll()
+        private void SendStartPauseMessageToAll(long initiatorId)
         {
             Helper.Multiplayer.SendMessage(
-                message: MessageTypeStartPause,
+                message: initiatorId,
                 messageType: MessageTypeStartPause,
                 modIDs: new[] { ModManifest.UniqueID }
             );
         }
 
-        private void SendCloseMinigameMessageToAll()
+        private void SendSpecificStartPauseMessage(long playerId, long initiatorId)
         {
             Helper.Multiplayer.SendMessage(
-                message: MessageTypeEndPause,
+                message: (playerId, initiatorId),
+                messageType: MessageTypeSpecificStartPause,
+                modIDs: new[] { ModManifest.UniqueID }
+            );
+        }
+
+        private void SendEndPauseMessageToAll(long initiatorId)
+        {
+            Helper.Multiplayer.SendMessage(
+                message: initiatorId,
                 messageType: MessageTypeEndPause,
-                modIDs: new[] { ModManifest.UniqueID }
-            );
-        }
-
-        private void SendAddInitiatorMessageToAll(long playerId)
-        {
-            Helper.Multiplayer.SendMessage(
-                message: playerId,
-                messageType: MessageTypeAddPlayerToInitiators,
-                modIDs: new[] { ModManifest.UniqueID }
-            );
-        }
-
-        private void SendRemoveInitiatorMessageToAll(long playerId)
-        {
-            Helper.Multiplayer.SendMessage(
-                message: playerId,
-                messageType: MessageTypeRemovePlayerFromInitiators,
                 modIDs: new[] { ModManifest.UniqueID }
             );
         }
