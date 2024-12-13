@@ -324,9 +324,9 @@ namespace FairMultiplayerCutsceneExperience
                 int currentYPosition = yPositionOnScreen + Game1.tileSize;
                 currentYPosition = DrawPauseMessage(spriteBatch, currentYPosition);
                 currentYPosition = DrawPlayerMessage(spriteBatch, currentYPosition);
+                DrawTip(spriteBatch, currentYPosition + Game1.tileSize * 3);
                 DrawJunimoKartButton(spriteBatch, currentYPosition);
                 DrawPrairieKingButton(spriteBatch, currentYPosition);
-                DrawTip(spriteBatch, currentYPosition + Game1.tileSize * 3);
                 HandleCursorType(spriteBatch);
                 base.draw(spriteBatch);
             }
@@ -463,6 +463,16 @@ namespace FairMultiplayerCutsceneExperience
                 {
                     _previousLeftButtonState = ButtonState.Released;
                 }
+            }
+
+            public override void snapCursorToCurrentSnappedComponent()
+            {
+                if (currentlySnappedComponent == null)
+                    return;
+
+                Game1.setMousePosition(
+                    currentlySnappedComponent.bounds.Right - currentlySnappedComponent.bounds.Width / 4,
+                    currentlySnappedComponent.bounds.Bottom - currentlySnappedComponent.bounds.Height / 2, true);
             }
 
             public override void receiveGamePadButton(Buttons b)
