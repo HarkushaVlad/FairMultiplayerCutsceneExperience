@@ -29,6 +29,7 @@ namespace FairMultiplayerCutsceneExperience
             helper.Events.GameLoop.DayStarted += OnDayStarted;
             helper.Events.Multiplayer.PeerConnected += OnPeerConnected;
             helper.Events.Multiplayer.PeerDisconnected += OnPeerDisconnected;
+
             helper.ConsoleCommands.Add("reset", Helper.Translation.Get("command.resetCommandDescription"),
                 ResetConsoleCommand);
 
@@ -42,7 +43,7 @@ namespace FairMultiplayerCutsceneExperience
 
         private void ResetChatBoxCommand(string[] args, ChatBox chat)
         {
-            // If the player is not the host, show an error in the chat and exit
+            // Only the host can use the command
             if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
             {
                 Game1.chatBox.addMessage($"[{ModManifest.Name}] " + Helper.Translation.Get("command.resetCommandError"),
@@ -56,7 +57,7 @@ namespace FairMultiplayerCutsceneExperience
 
         private void ResetConsoleCommand(string command, string[] args)
         {
-            // If the player is not the host, show an error in the chat and exit
+            // Only the host can use the command
             if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
             {
                 Monitor.Log(Helper.Translation.Get("command.resetCommandError"),
@@ -73,6 +74,7 @@ namespace FairMultiplayerCutsceneExperience
             if (!Context.IsWorldReady)
                 return;
 
+            // If the reset command was recently used, check if enough time has passed before proceeding
             if (_blockTimeStamp != null)
             {
                 var timeDifference = DateTime.Now - _blockTimeStamp.Value;
@@ -86,6 +88,7 @@ namespace FairMultiplayerCutsceneExperience
                 }
             }
 
+            // If a cutscene has started
             if (Game1.CurrentEvent != null && !Game1.CurrentEvent.skipped)
             {
                 var initiator = Game1.CurrentEvent.farmer;
@@ -94,6 +97,7 @@ namespace FairMultiplayerCutsceneExperience
 
                 var playerId = initiator.UniqueMultiplayerID;
 
+                // If the player is not already in a cutscene and the event is a cutscene
                 if (!IsPlayerInCutscene(playerId) && Game1.CurrentEvent.skippable)
                 {
                     string message = Helper.Translation.Get("message.startCutscene", new { initiator.Name });
@@ -103,15 +107,20 @@ namespace FairMultiplayerCutsceneExperience
 
                     SendStartPauseMessageToAll(playerId);
                 }
+
+                return;
             }
-            else if (IsCutsceneActive() &&
-                     IsPlayerInCutscene(Game1.player.UniqueMultiplayerID) &&
-                     (Game1.CurrentEvent == null || Game1.CurrentEvent.skipped))
+
+            // Check if a cutscene was active but has now ended or been skipped
+            if (IsCutsceneActive() &&
+                IsPlayerInCutscene(Game1.player.UniqueMultiplayerID) &&
+                (Game1.CurrentEvent == null || Game1.CurrentEvent.skipped))
             {
                 SendEndPauseMessageToAll(Game1.player.UniqueMultiplayerID);
 
                 CutsceneInitiators.Remove(Game1.player.UniqueMultiplayerID);
 
+                // If there is someone else still in the cutscene, start the pause
                 if (IsCutsceneActive())
                     StartPause();
 
@@ -122,6 +131,7 @@ namespace FairMultiplayerCutsceneExperience
 
         private void OnDayStarted(object? sender, DayStartedEventArgs e)
         {
+            // Store the host mod version
             if (Game1.player.UniqueMultiplayerID == Game1.MasterPlayer.UniqueMultiplayerID)
             {
                 _hostModVersion = ModManifest.Version.ToString();
@@ -141,11 +151,13 @@ namespace FairMultiplayerCutsceneExperience
                 return;
             }
 
+            // Only the host performs necessary actions when a peer connects
             if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
                 return;
 
             Thread.Sleep(3000);
 
+            // Check if cutscene is active and open menu for the peer
             if (
                 IsCutsceneActive() &&
                 !IsPlayerInCutscene(e.Peer.PlayerID))
@@ -153,6 +165,7 @@ namespace FairMultiplayerCutsceneExperience
                 SendSpecificStartPauseMessage(e.Peer.PlayerID, CutsceneInitiators.ToArray()[0]);
             }
 
+            // Handle mod version mismatch
             if (peerMod == null)
             {
                 var message = $"[{ModManifest.Name}] " +
@@ -171,13 +184,15 @@ namespace FairMultiplayerCutsceneExperience
             }
         }
 
-
         private void OnPeerDisconnected(object? sender, PeerDisconnectedEventArgs e)
         {
+            // When a peer disconnects, remove them from the cutscene initiators
             if (!CutsceneInitiators.Contains(e.Peer.PlayerID))
                 return;
 
             CutsceneInitiators.Remove(e.Peer.PlayerID);
+
+            EndPause();
             SendEndPauseMessageToAll(e.Peer.PlayerID);
         }
 
@@ -192,19 +207,22 @@ namespace FairMultiplayerCutsceneExperience
                     ResetPauseState();
                     break;
                 case MessageTypeSendChatMessage:
-                    // read message text and is it warning message
+                    // Log and display chat messages received from other players
+                    // Read message text and warning flag
                     var messageTuple = e.ReadAs<(string, bool)>();
                     Monitor.Log(messageTuple.Item1, messageTuple.Item2 ? LogLevel.Warn : LogLevel.Info);
                     Game1.chatBox.addMessage(messageTuple.Item1, messageTuple.Item2 ? Color.Orange : Color.Gold);
                     break;
                 case MessageTypeStartPause:
-                    // read initiator player id
+                    // Handle starting the pause when a cutscene begins
+                    // Read initiator id
                     CutsceneInitiators.Add(e.ReadAs<long>());
                     if (!IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
                         StartPause();
                     break;
                 case MessageTypeSpecificStartPause:
-                    // read playerId and initiator id
+                    // Handle specific start of a pause for a player and initiator
+                    // Read player id and initiator id
                     var playerIds = e.ReadAs<(long, long)>();
                     if (Game1.player.UniqueMultiplayerID == playerIds.Item1)
                     {
@@ -219,7 +237,8 @@ namespace FairMultiplayerCutsceneExperience
 
                     break;
                 case MessageTypeEndPause:
-                    // read initiator player id
+                    // Handle the end of the pause
+                    // Read initiator id
                     CutsceneInitiators.Remove(e.ReadAs<long>());
                     if (!IsCutsceneActive())
                         EndPause();
@@ -232,6 +251,7 @@ namespace FairMultiplayerCutsceneExperience
             if (!Context.IsWorldReady || Game1.activeClickableMenu != null)
                 return;
 
+            // Open pause menu if a cutscene is active and the player is not in the cutscene
             if (
                 IsCutsceneActive() &&
                 !IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
@@ -251,7 +271,6 @@ namespace FairMultiplayerCutsceneExperience
                 Game1.CurrentEvent.skipEvent();
                 Game1.CurrentEvent.exitEvent();
             }
-
 
             CutsceneInitiators.Clear();
 
@@ -319,8 +338,12 @@ namespace FairMultiplayerCutsceneExperience
         {
             var initiatorName = Game1.getOnlineFarmers()
                 .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name;
+
             if (String.IsNullOrEmpty(_currTip))
+            {
                 _currTip = Helper.Translation.Get($"tips.tip{new Random().Next(1, 37)}");
+            }
+
             Game1.activeClickableMenu = new PauseMenu(Helper, initiatorName, _currTip);
         }
 
