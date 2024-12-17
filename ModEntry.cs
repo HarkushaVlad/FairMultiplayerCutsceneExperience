@@ -1,12 +1,9 @@
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
-using StardewValley.BellsAndWhistles;
 using StardewValley.Menus;
-using StardewValley.Minigames;
 
 namespace FairMultiplayerCutsceneExperience
 {
@@ -18,7 +15,7 @@ namespace FairMultiplayerCutsceneExperience
         private const string MessageTypeEndPause = "endPause";
         private const string MessageTypeResetPauseState = "resetPauseState";
 
-        private static ButtonState _previousLeftButtonState = ButtonState.Released;
+        internal static ButtonState PreviousLeftButtonState = ButtonState.Released;
         private static readonly HashSet<long> CutsceneInitiators = new();
         private static string? _hostModVersion;
         private static string? _currTip;
@@ -45,6 +42,7 @@ namespace FairMultiplayerCutsceneExperience
 
         private void ResetChatBoxCommand(string[] args, ChatBox chat)
         {
+            // If the player is not the host, show an error in the chat and exit
             if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
             {
                 Game1.chatBox.addMessage($"[{ModManifest.Name}] " + Helper.Translation.Get("command.resetCommandError"),
@@ -58,6 +56,7 @@ namespace FairMultiplayerCutsceneExperience
 
         private void ResetConsoleCommand(string command, string[] args)
         {
+            // If the player is not the host, show an error in the chat and exit
             if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
             {
                 Monitor.Log(Helper.Translation.Get("command.resetCommandError"),
@@ -156,15 +155,15 @@ namespace FairMultiplayerCutsceneExperience
 
             if (peerMod == null)
             {
-                string message = $"[{ModManifest.Name}] " +
-                                 Helper.Translation.Get("message.noMod", new { name = peerName });
+                var message = $"[{ModManifest.Name}] " +
+                              Helper.Translation.Get("message.noMod", new { name = peerName });
                 BroadcastMessage(message, true);
                 return;
             }
 
             if (peerMod?.Version.ToString() != _hostModVersion)
             {
-                string message = $"[{ModManifest.Name}] " + Helper.Translation.Get(
+                var message = $"[{ModManifest.Name}] " + Helper.Translation.Get(
                     "message.modVersionMismatch",
                     new { name = peerName, modVersion = peerMod?.Version.ToString(), hostModVersion = _hostModVersion }
                 );
@@ -175,52 +174,56 @@ namespace FairMultiplayerCutsceneExperience
 
         private void OnPeerDisconnected(object? sender, PeerDisconnectedEventArgs e)
         {
-            if (CutsceneInitiators.Contains(e.Peer.PlayerID))
-            {
-                CutsceneInitiators.Remove(e.Peer.PlayerID);
-                SendEndPauseMessageToAll(e.Peer.PlayerID);
-            }
+            if (!CutsceneInitiators.Contains(e.Peer.PlayerID))
+                return;
+
+            CutsceneInitiators.Remove(e.Peer.PlayerID);
+            SendEndPauseMessageToAll(e.Peer.PlayerID);
         }
 
         private void OnModMessageReceived(object? sender, ModMessageReceivedEventArgs e)
         {
-            if (e.FromModID == ModManifest.UniqueID)
-            {
-                switch (e.Type)
-                {
-                    case MessageTypeResetPauseState:
-                        ResetPauseState();
-                        break;
-                    case MessageTypeSendChatMessage:
-                        var messageTuple = e.ReadAs<(string, bool)>();
-                        Monitor.Log(messageTuple.Item1, messageTuple.Item2 ? LogLevel.Warn : LogLevel.Info);
-                        Game1.chatBox.addMessage(messageTuple.Item1, messageTuple.Item2 ? Color.Orange : Color.Gold);
-                        break;
-                    case MessageTypeStartPause:
-                        CutsceneInitiators.Add(e.ReadAs<long>());
-                        if (!IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
-                            StartPause();
-                        break;
-                    case MessageTypeSpecificStartPause:
-                        var playerIds = e.ReadAs<(long, long)>();
-                        if (Game1.player.UniqueMultiplayerID == playerIds.Item1)
-                        {
-                            var initiatorName = Game1.otherFarmers.ToList()
-                                .Find(farmer => farmer.Key == playerIds.Item2).Value.Name;
-                            Game1.chatBox.addMessage(
-                                Helper.Translation.Get("message.startCutscene",
-                                    new { name = initiatorName }), Color.Gold);
-                            CutsceneInitiators.Add(playerIds.Item2);
-                            StartPause();
-                        }
+            if (e.FromModID != ModManifest.UniqueID)
+                return;
 
-                        break;
-                    case MessageTypeEndPause:
-                        CutsceneInitiators.Remove(e.ReadAs<long>());
-                        if (!IsCutsceneActive())
-                            EndPause();
-                        break;
-                }
+            switch (e.Type)
+            {
+                case MessageTypeResetPauseState:
+                    ResetPauseState();
+                    break;
+                case MessageTypeSendChatMessage:
+                    // read message text and is it warning message
+                    var messageTuple = e.ReadAs<(string, bool)>();
+                    Monitor.Log(messageTuple.Item1, messageTuple.Item2 ? LogLevel.Warn : LogLevel.Info);
+                    Game1.chatBox.addMessage(messageTuple.Item1, messageTuple.Item2 ? Color.Orange : Color.Gold);
+                    break;
+                case MessageTypeStartPause:
+                    // read initiator player id
+                    CutsceneInitiators.Add(e.ReadAs<long>());
+                    if (!IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
+                        StartPause();
+                    break;
+                case MessageTypeSpecificStartPause:
+                    // read playerId and initiator id
+                    var playerIds = e.ReadAs<(long, long)>();
+                    if (Game1.player.UniqueMultiplayerID == playerIds.Item1)
+                    {
+                        var initiatorName = Game1.otherFarmers.ToList()
+                            .Find(farmer => farmer.Key == playerIds.Item2).Value.Name;
+                        Game1.chatBox.addMessage(
+                            Helper.Translation.Get("message.startCutscene",
+                                new { name = initiatorName }), Color.Gold);
+                        CutsceneInitiators.Add(playerIds.Item2);
+                        StartPause();
+                    }
+
+                    break;
+                case MessageTypeEndPause:
+                    // read initiator player id
+                    CutsceneInitiators.Remove(e.ReadAs<long>());
+                    if (!IsCutsceneActive())
+                        EndPause();
+                    break;
             }
         }
 
@@ -241,7 +244,7 @@ namespace FairMultiplayerCutsceneExperience
         {
             _blockTimeStamp = DateTime.Now;
 
-            _previousLeftButtonState = ButtonState.Released;
+            PreviousLeftButtonState = ButtonState.Released;
 
             if (IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
             {
@@ -314,14 +317,14 @@ namespace FairMultiplayerCutsceneExperience
 
         private void StartPause()
         {
-            string initiatorName = Game1.getOnlineFarmers()
+            var initiatorName = Game1.getOnlineFarmers()
                 .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name;
             if (String.IsNullOrEmpty(_currTip))
                 _currTip = Helper.Translation.Get($"tips.tip{new Random().Next(1, 37)}");
             Game1.activeClickableMenu = new PauseMenu(Helper, initiatorName, _currTip);
         }
 
-        private void EndPause()
+        private static void EndPause()
         {
             Game1.currentMinigame?.unload();
             Game1.currentMinigame = null;
@@ -329,349 +332,14 @@ namespace FairMultiplayerCutsceneExperience
             _currTip = null;
         }
 
-        private static void OpenJunimoCartMinigame()
-        {
-            Game1.currentMinigame = new MineCart(new Random().Next(0, 9), 3);
-        }
-
-        private static void OpenPrairieKingMinigame()
-        {
-            Game1.currentMinigame = new AbigailGame();
-        }
-
-        private bool IsPlayerInCutscene(long playerId)
+        private static bool IsPlayerInCutscene(long playerId)
         {
             return CutsceneInitiators.Contains(playerId);
         }
 
-        private bool IsCutsceneActive()
+        private static bool IsCutsceneActive()
         {
             return CutsceneInitiators.Count > 0;
-        }
-
-        private class PauseMenu : IClickableMenu
-        {
-            private const int MenuWidth = Game1.tileSize * 17;
-            private const int HeightWithoutPlayerLines = Game1.tileSize * 9 + Game1.tileSize / 2;
-
-            private readonly IModHelper _helper;
-            private readonly List<string> _messageLines;
-            private readonly List<string> _tipLines;
-            private ClickableTextureComponent? _prairieKingButton;
-            private ClickableTextureComponent? _junimoKartButton;
-
-            public PauseMenu(IModHelper helper, string initiatorPlayerName, string tipMessage)
-                : base(
-                    (Game1.uiViewport.Width - MenuWidth) / 2,
-                    (Game1.uiViewport.Height - CalculateMenuHeight(new[]
-                        {
-                            initiatorPlayerName
-                        },
-                        new[] { tipMessage })) / 2,
-                    MenuWidth,
-                    CalculateMenuHeight(new[] { initiatorPlayerName }, new[] { tipMessage })
-                )
-            {
-                _helper = helper;
-                string playerMessage = GetPlayerMessage(initiatorPlayerName);
-                _messageLines = WrapText(playerMessage, width - Game1.tileSize * 2);
-                _tipLines = WrapText(tipMessage, width);
-            }
-
-            private static int CalculateMenuHeight(string[] spriteMessages, string[] smallMessages)
-            {
-                int height = HeightWithoutPlayerLines;
-
-                foreach (string message in spriteMessages)
-                {
-                    height += Game1.tileSize * (WrapText(message, MenuWidth - Game1.tileSize * 2).Count - 1);
-                }
-
-                foreach (string message in smallMessages)
-                {
-                    height += Game1.tileSize / 2 * (WrapText(message, MenuWidth).Count - 1);
-                }
-
-                return height;
-            }
-
-
-            private string GetPlayerMessage(string initiatorPlayerName)
-            {
-                string playerName = initiatorPlayerName.Length > 0
-                    ? initiatorPlayerName
-                    : _helper.Translation.Get($"menu.player");
-
-                return $" {_helper.Translation.Get($"menu.inCutscene", new { name = playerName })}";
-            }
-
-            public override void draw(SpriteBatch spriteBatch)
-            {
-                DrawBackground();
-                int currentYPosition = yPositionOnScreen + Game1.tileSize;
-                currentYPosition = DrawPauseMessage(spriteBatch, currentYPosition);
-                currentYPosition = DrawPlayerMessage(spriteBatch, currentYPosition);
-                DrawTip(spriteBatch, currentYPosition + Game1.tileSize * 3);
-                DrawJunimoKartButton(spriteBatch, currentYPosition);
-                DrawPrairieKingButton(spriteBatch, currentYPosition);
-                HandleCursorType(spriteBatch);
-                base.draw(spriteBatch);
-            }
-
-            private void DrawBackground()
-            {
-                Game1.drawDialogueBox(xPositionOnScreen, yPositionOnScreen, width, height, false, true);
-            }
-
-            private int DrawPauseMessage(SpriteBatch spriteBatch, int startY)
-            {
-                SpriteText.drawStringWithScrollCenteredAt(
-                    spriteBatch,
-                    _helper.Translation.Get($"menu.title"),
-                    xPositionOnScreen + width / 2,
-                    startY
-                );
-
-                return startY + Game1.tileSize + Game1.tileSize / 2;
-            }
-
-            private int DrawPlayerMessage(SpriteBatch spriteBatch, int startY)
-            {
-                int messageX = xPositionOnScreen + Game1.tileSize;
-
-                foreach (string line in _messageLines)
-                {
-                    SpriteText.drawString(spriteBatch, line, messageX, startY);
-                    startY += Game1.tileSize;
-                }
-
-                SpriteText.drawString(spriteBatch, _helper.Translation.Get("menu.whileWait"), messageX, startY);
-
-                return startY + Game1.tileSize + Game1.tileSize / 2;
-            }
-
-            private void DrawPrairieKingButton(SpriteBatch spriteBatch, int buttonY)
-            {
-                int buttonX = xPositionOnScreen + width / 2 - Game1.tileSize - Game1.tileSize / 2;
-
-                _prairieKingButton = new ClickableTextureComponent(
-                    new Rectangle(buttonX, buttonY, Game1.tileSize, Game1.tileSize * 2),
-                    Game1.content.Load<Texture2D>("TileSheets/Craftables"),
-                    new Rectangle(80, 544, 16, 32),
-                    4f,
-                    true
-                )
-                {
-                    hoverText = _helper.Translation.Get($"menu.playPrairieKing")
-                };
-
-                _prairieKingButton.name = "Prairie King Button";
-                _prairieKingButton.myID = 0;
-
-                _prairieKingButton.draw(spriteBatch);
-
-                if (_prairieKingButton.containsPoint(Game1.getMouseX(), Game1.getMouseY()))
-                {
-                    drawHoverText(spriteBatch, _prairieKingButton.hoverText, Game1.dialogueFont);
-                    HandleButtonClick(OpenPrairieKingMinigame);
-                }
-            }
-
-            private void DrawJunimoKartButton(SpriteBatch spriteBatch, int buttonY)
-            {
-                int buttonX = xPositionOnScreen + width / 2 + Game1.tileSize / 2;
-
-                _junimoKartButton = new ClickableTextureComponent(
-                    new Rectangle(buttonX, buttonY, Game1.tileSize, Game1.tileSize * 2),
-                    Game1.content.Load<Texture2D>("TileSheets/Craftables"),
-                    new Rectangle(112, 608, 16, 32),
-                    4f,
-                    true
-                )
-                {
-                    hoverText = _helper.Translation.Get($"menu.playJunimoKart")
-                };
-
-                _junimoKartButton.name = "Junimo Kart Button";
-                _junimoKartButton.myID = 1;
-
-                _junimoKartButton.draw(spriteBatch);
-
-                if (_junimoKartButton.containsPoint(Game1.getMouseX(), Game1.getMouseY()))
-                {
-                    drawHoverText(spriteBatch, _junimoKartButton.hoverText, Game1.dialogueFont);
-                    HandleButtonClick(OpenJunimoCartMinigame);
-                }
-            }
-
-            private void DrawTip(SpriteBatch spriteBatch, int tipY)
-            {
-                foreach (string line in _tipLines)
-                {
-                    int tipX = xPositionOnScreen + (width / 2) - (int)(Game1.smallFont.MeasureString(line).X / 2);
-                    spriteBatch.DrawString(Game1.smallFont, line, new Vector2(tipX, tipY), Color.Black);
-                    tipY += Game1.tileSize / 2;
-                }
-            }
-
-            private void HandleCursorType(SpriteBatch spriteBatch)
-            {
-                bool isPrairieKingButtonHovered = _prairieKingButton != null &&
-                                                  _prairieKingButton.containsPoint(Game1.getMouseX(),
-                                                      Game1.getMouseY());
-
-                bool isJunimoKartButton = _junimoKartButton != null &&
-                                          _junimoKartButton.containsPoint(Game1.getMouseX(), Game1.getMouseY());
-
-                if (isPrairieKingButtonHovered || isJunimoKartButton)
-                {
-                    Game1.mouseCursor = Game1.cursor_gamepad_pointer;
-                    drawMouse(spriteBatch, false, Game1.cursor_gamepad_pointer);
-                }
-                else
-                {
-                    Game1.mouseCursor = Game1.cursor_default;
-                    drawMouse(spriteBatch, false, Game1.cursor_default);
-                }
-            }
-
-            private void HandleButtonClick(Action openMinigame)
-            {
-                if (Game1.input.GetMouseState().LeftButton == ButtonState.Pressed &&
-                    _previousLeftButtonState == ButtonState.Released)
-                {
-                    Game1.playSound("coin");
-                    openMinigame();
-                    _previousLeftButtonState = ButtonState.Pressed;
-                    exitThisMenuNoSound();
-                }
-
-                if (Game1.input.GetMouseState().LeftButton == ButtonState.Released)
-                {
-                    _previousLeftButtonState = ButtonState.Released;
-                }
-            }
-
-            public override void snapCursorToCurrentSnappedComponent()
-            {
-                if (currentlySnappedComponent == null)
-                    return;
-
-                Game1.setMousePosition(
-                    currentlySnappedComponent.bounds.Right - currentlySnappedComponent.bounds.Width / 4,
-                    currentlySnappedComponent.bounds.Bottom - currentlySnappedComponent.bounds.Height / 2, true);
-            }
-
-            public override void receiveGamePadButton(Buttons b)
-            {
-                base.receiveGamePadButton(b);
-
-                List<ClickableComponent?> menuButtons = new() { _prairieKingButton, _junimoKartButton };
-
-                if ((b == Buttons.DPadRight || b == Buttons.DPadLeft || b == Buttons.DPadUp || b == Buttons.DPadDown) &&
-                    menuButtons.Count > 0)
-                {
-                    if (currentlySnappedComponent == null)
-                    {
-                        currentlySnappedComponent = menuButtons.First();
-                        return;
-                    }
-
-                    if (b == Buttons.DPadUp || b == Buttons.DPadDown)
-                    {
-                        snapCursorToCurrentSnappedComponent();
-                        return;
-                    }
-
-                    int currentIndex = menuButtons.FindIndex(clickableComponent =>
-                        clickableComponent?.myID == currentlySnappedComponent?.myID);
-
-                    int nextIndex = (currentIndex + (b == Buttons.DPadRight ? 1 : -1) + menuButtons.Count) %
-                                    menuButtons.Count;
-
-                    currentlySnappedComponent = menuButtons[nextIndex];
-                }
-
-                if (_junimoKartButton != null &&
-                    currentlySnappedComponent?.myID == _junimoKartButton?.myID &&
-                    b == Buttons.A)
-                {
-                    Game1.playSound("coin");
-                    OpenJunimoCartMinigame();
-                    exitThisMenuNoSound();
-                    currentlySnappedComponent = null;
-                }
-                else if (_prairieKingButton != null &&
-                         currentlySnappedComponent?.myID == _prairieKingButton?.myID &&
-                         b == Buttons.A)
-                {
-                    Game1.playSound("coin");
-                    OpenPrairieKingMinigame();
-                    exitThisMenuNoSound();
-                    currentlySnappedComponent = null;
-                }
-            }
-        }
-
-        private static List<string> WrapText(string text, int maxWidth)
-        {
-            List<string> lines = new List<string>();
-            string[] words = text.Split(' ');
-            string currentLine = "";
-
-            foreach (string word in words)
-            {
-                if (SpriteText.getWidthOfString(word) > maxWidth)
-                {
-                    string truncatedWord = TruncateWord(word, maxWidth);
-                    if (!string.IsNullOrEmpty(currentLine))
-                    {
-                        lines.Add(currentLine);
-                        currentLine = "";
-                    }
-
-                    lines.Add(truncatedWord);
-                }
-                else
-                {
-                    string testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
-                    if (SpriteText.getWidthOfString(testLine) <= maxWidth)
-                    {
-                        currentLine = testLine;
-                    }
-                    else
-                    {
-                        lines.Add(currentLine);
-                        currentLine = word;
-                    }
-                }
-            }
-
-            if (!string.IsNullOrEmpty(currentLine))
-            {
-                lines.Add(currentLine);
-            }
-
-            return lines;
-        }
-
-        private static string TruncateWord(string word, int maxWidth)
-        {
-            string truncatedWord = "";
-            foreach (char c in word)
-            {
-                string testWord = truncatedWord + c;
-                if (SpriteText.getWidthOfString(testWord + "...") <= maxWidth)
-                {
-                    truncatedWord = testWord;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            return truncatedWord + "...";
         }
     }
 }
