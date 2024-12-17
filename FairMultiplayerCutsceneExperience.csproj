@@ -4,6 +4,7 @@
         <TargetFramework>net6.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <GamePath>/run/media/vhark/Games/SteamLibrary/steamapps/common/Stardew Valley</GamePath>
     </PropertyGroup>
 
     <ItemGroup>
@@ -25,6 +26,10 @@
       <Reference Include="xTile">
         <HintPath>..\..\..\..\Games\SteamLibrary\steamapps\common\Stardew Valley\xTile.dll</HintPath>
       </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.3.2"/>
     </ItemGroup>
 
 </Project>

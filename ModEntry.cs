@@ -16,39 +16,88 @@ namespace FairMultiplayerCutsceneExperience
         private const string MessageTypeStartPause = "startPause";
         private const string MessageTypeSpecificStartPause = "specificStartPause";
         private const string MessageTypeEndPause = "endPause";
+        private const string MessageTypeResetPauseState = "resetPauseState";
 
         private static ButtonState _previousLeftButtonState = ButtonState.Released;
         private static readonly HashSet<long> CutsceneInitiators = new();
         private static string? _hostModVersion;
         private static string? _currTip;
+        private static DateTime? _blockTimeStamp;
 
         public override void Entry(IModHelper helper)
         {
-            helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
+            helper.Events.GameLoop.OneSecondUpdateTicked += OnUpdateTicked;
             helper.Events.Display.RenderingHud += OnRenderingHud;
             helper.Events.Multiplayer.ModMessageReceived += OnModMessageReceived;
             helper.Events.GameLoop.DayStarted += OnDayStarted;
             helper.Events.Multiplayer.PeerConnected += OnPeerConnected;
             helper.Events.Multiplayer.PeerDisconnected += OnPeerDisconnected;
+            helper.ConsoleCommands.Add("reset", Helper.Translation.Get("command.resetCommandDescription"),
+                ResetConsoleCommand);
+
+            ChatCommands.Register(
+                "reset",
+                ResetChatBoxCommand,
+                name => Helper.Translation.Get("command.resetCommandDescription"),
+                cheatsOnly: false
+            );
         }
 
-        private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
+        private void ResetChatBoxCommand(string[] args, ChatBox chat)
+        {
+            if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
+            {
+                Game1.chatBox.addMessage($"[{ModManifest.Name}] " + Helper.Translation.Get("command.resetCommandError"),
+                    Color.Red);
+                return;
+            }
+
+            ResetPauseState();
+            SendResetPauseStateToAll();
+        }
+
+        private void ResetConsoleCommand(string command, string[] args)
+        {
+            if (Game1.player.UniqueMultiplayerID != Game1.MasterPlayer.UniqueMultiplayerID)
+            {
+                Monitor.Log(Helper.Translation.Get("command.resetCommandError"),
+                    LogLevel.Error);
+                return;
+            }
+
+            ResetPauseState();
+            SendResetPauseStateToAll();
+        }
+
+        private void OnUpdateTicked(object? sender, OneSecondUpdateTickedEventArgs e)
         {
             if (!Context.IsWorldReady)
                 return;
 
-            if (Game1.CurrentEvent != null)
+            if (_blockTimeStamp != null)
             {
-                Farmer? initiator = Game1.CurrentEvent.farmer;
+                var timeDifference = DateTime.Now - _blockTimeStamp.Value;
+                if (timeDifference.TotalSeconds >= 2)
+                {
+                    _blockTimeStamp = null;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            if (Game1.CurrentEvent != null && !Game1.CurrentEvent.skipped)
+            {
+                var initiator = Game1.CurrentEvent.farmer;
                 if (initiator == null)
                     return;
 
-                long playerId = initiator.UniqueMultiplayerID;
+                var playerId = initiator.UniqueMultiplayerID;
 
-                if (!IsPlayerInCutscene(playerId) &&
-                    Game1.CurrentEvent.eventCommands.Contains("skippable"))
+                if (!IsPlayerInCutscene(playerId) && Game1.CurrentEvent.skippable)
                 {
-                    string message = Helper.Translation.Get("message.startCutscene", new { initiator.name });
+                    string message = Helper.Translation.Get("message.startCutscene", new { initiator.Name });
                     BroadcastMessage(message);
 
                     CutsceneInitiators.Add(playerId);
@@ -58,13 +107,16 @@ namespace FairMultiplayerCutsceneExperience
             }
             else if (IsCutsceneActive() &&
                      IsPlayerInCutscene(Game1.player.UniqueMultiplayerID) &&
-                     Game1.CurrentEvent == null)
+                     (Game1.CurrentEvent == null || Game1.CurrentEvent.skipped))
             {
                 SendEndPauseMessageToAll(Game1.player.UniqueMultiplayerID);
 
                 CutsceneInitiators.Remove(Game1.player.UniqueMultiplayerID);
 
-                string message = Helper.Translation.Get("message.finishCutscene", new { Game1.player.name });
+                if (IsCutsceneActive())
+                    StartPause();
+
+                string message = Helper.Translation.Get("message.finishCutscene", new { Game1.player.Name });
                 BroadcastMessage(message);
             }
         }
@@ -136,6 +188,9 @@ namespace FairMultiplayerCutsceneExperience
             {
                 switch (e.Type)
                 {
+                    case MessageTypeResetPauseState:
+                        ResetPauseState();
+                        break;
                     case MessageTypeSendChatMessage:
                         var messageTuple = e.ReadAs<(string, bool)>();
                         Monitor.Log(messageTuple.Item1, messageTuple.Item2 ? LogLevel.Warn : LogLevel.Info);
@@ -151,10 +206,10 @@ namespace FairMultiplayerCutsceneExperience
                         if (Game1.player.UniqueMultiplayerID == playerIds.Item1)
                         {
                             var initiatorName = Game1.otherFarmers.ToList()
-                                .Find(farmer => farmer.Key == playerIds.Item2).Value.name;
+                                .Find(farmer => farmer.Key == playerIds.Item2).Value.Name;
                             Game1.chatBox.addMessage(
                                 Helper.Translation.Get("message.startCutscene",
-                                    new { name = initiatorName.ToString() }), Color.Gold);
+                                    new { name = initiatorName }), Color.Gold);
                             CutsceneInitiators.Add(playerIds.Item2);
                             StartPause();
                         }
@@ -162,7 +217,7 @@ namespace FairMultiplayerCutsceneExperience
                         break;
                     case MessageTypeEndPause:
                         CutsceneInitiators.Remove(e.ReadAs<long>());
-                        if (!IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
+                        if (!IsCutsceneActive())
                             EndPause();
                         break;
                 }
@@ -180,6 +235,29 @@ namespace FairMultiplayerCutsceneExperience
             {
                 StartPause();
             }
+        }
+
+        private void ResetPauseState()
+        {
+            _blockTimeStamp = DateTime.Now;
+
+            _previousLeftButtonState = ButtonState.Released;
+
+            if (IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
+            {
+                Game1.CurrentEvent.skipEvent();
+                Game1.CurrentEvent.exitEvent();
+            }
+
+
+            CutsceneInitiators.Clear();
+
+            EndPause();
+
+            Game1.chatBox.addMessage($"[{ModManifest.Name}] " + Helper.Translation.Get("command.resetCommandResult"),
+                Color.Gold);
+            Monitor.Log(Helper.Translation.Get("command.resetCommandResult"),
+                LogLevel.Info);
         }
 
         private void BroadcastMessage(string message, bool isWarning = false)
@@ -221,6 +299,15 @@ namespace FairMultiplayerCutsceneExperience
             Helper.Multiplayer.SendMessage(
                 message: initiatorId,
                 messageType: MessageTypeEndPause,
+                modIDs: new[] { ModManifest.UniqueID }
+            );
+        }
+
+        private void SendResetPauseStateToAll()
+        {
+            Helper.Multiplayer.SendMessage(
+                message: MessageTypeResetPauseState,
+                messageType: MessageTypeResetPauseState,
                 modIDs: new[] { ModManifest.UniqueID }
             );
         }
