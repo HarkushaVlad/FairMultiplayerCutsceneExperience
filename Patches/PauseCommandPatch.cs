@@ -14,6 +14,10 @@ namespace FairMultiplayerCutsceneExperience.Patches
             {
                 Game1.activeClickableMenu = new PauseMenu();
             }
+            else if (Game1.activeClickableMenu is PauseMenu)
+            {
+                Game1.activeClickableMenu = null;
+            }
         }
     }
 }
