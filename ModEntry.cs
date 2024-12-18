@@ -1,4 +1,5 @@
 using FairMultiplayerCutsceneExperience.Menus;
+using FairMultiplayerCutsceneExperience.Utils;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -348,14 +349,14 @@ namespace FairMultiplayerCutsceneExperience
             if (String.IsNullOrEmpty(_currTip))
                 _currTip = GetRandomTip();
 
-            Game1.activeClickableMenu = new CutscenePauseMenu(initiatorName, _currTip);
+            MenuStack.PushMenu(new CutscenePauseMenu(initiatorName, _currTip));
         }
 
         private static void EndPause()
         {
             Game1.currentMinigame?.unload();
             Game1.currentMinigame = null;
-            Game1.activeClickableMenu = null;
+            MenuStack.PopMenu();
             _currTip = null;
         }
 

@@ -1,4 +1,5 @@
 using FairMultiplayerCutsceneExperience.Menus;
+using FairMultiplayerCutsceneExperience.Utils;
 using HarmonyLib;
 using StardewValley;
 using StardewValley.Menus;
@@ -12,11 +13,11 @@ namespace FairMultiplayerCutsceneExperience.Patches
         {
             if (Game1.netWorldState.Value.IsPaused)
             {
-                Game1.activeClickableMenu = new PauseMenu();
+                MenuStack.PushMenu(new PauseMenu());
             }
             else if (Game1.activeClickableMenu is PauseMenu)
             {
-                Game1.activeClickableMenu = null;
+                MenuStack.PopMenu();
             }
         }
     }
