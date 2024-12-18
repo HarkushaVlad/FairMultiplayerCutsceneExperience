@@ -1,26 +1,24 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using StardewModdingAPI;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
 using StardewValley.Menus;
 using StardewValley.Minigames;
 
-namespace FairMultiplayerCutsceneExperience
+namespace FairMultiplayerCutsceneExperience.Menus
 {
-    internal class PauseMenu : IClickableMenu
+    internal class CutscenePauseMenu : IClickableMenu
     {
         private const int MenuWidth = Game1.tileSize * 17;
         private const int HeightWithoutPlayerLines = Game1.tileSize * 9 + Game1.tileSize / 2;
 
-        private readonly IModHelper _helper;
         private readonly List<string> _messageLines;
         private readonly List<string> _tipLines;
         private ClickableTextureComponent? _prairieKingButton;
         private ClickableTextureComponent? _junimoKartButton;
 
-        public PauseMenu(IModHelper helper, string initiatorPlayerName, string tipMessage)
+        public CutscenePauseMenu(string initiatorPlayerName, string tipMessage)
             : base(
                 (Game1.uiViewport.Width - MenuWidth) / 2,
                 (Game1.uiViewport.Height - CalculateMenuHeight(new[]
@@ -32,7 +30,6 @@ namespace FairMultiplayerCutsceneExperience
                 CalculateMenuHeight(new[] { initiatorPlayerName }, new[] { tipMessage })
             )
         {
-            _helper = helper;
             var playerMessage = GetPlayerMessage(initiatorPlayerName);
             _messageLines = WrapText(playerMessage, width - Game1.tileSize * 2);
             _tipLines = WrapText(tipMessage, width);
@@ -55,9 +52,9 @@ namespace FairMultiplayerCutsceneExperience
         {
             var playerName = initiatorPlayerName.Length > 0
                 ? initiatorPlayerName
-                : _helper.Translation.Get($"menu.player");
+                : ModEntry.GetString($"menu.player");
 
-            return $" {_helper.Translation.Get($"menu.inCutscene", new { name = playerName })}";
+            return $" {ModEntry.GetString($"menu.inCutscene", new { name = playerName })}";
         }
 
         public override void draw(SpriteBatch spriteBatch)
@@ -92,7 +89,7 @@ namespace FairMultiplayerCutsceneExperience
         {
             SpriteText.drawStringWithScrollCenteredAt(
                 spriteBatch,
-                _helper.Translation.Get($"menu.title"),
+                ModEntry.GetString($"menu.title"),
                 xPositionOnScreen + width / 2,
                 startY
             );
@@ -110,7 +107,7 @@ namespace FairMultiplayerCutsceneExperience
                 startY += Game1.tileSize;
             }
 
-            SpriteText.drawString(spriteBatch, _helper.Translation.Get("menu.whileWait"), messageX, startY);
+            SpriteText.drawString(spriteBatch, ModEntry.GetString("menu.whileWait"), messageX, startY);
 
             return startY + Game1.tileSize + Game1.tileSize / 2;
         }
@@ -127,7 +124,7 @@ namespace FairMultiplayerCutsceneExperience
                 true
             )
             {
-                hoverText = _helper.Translation.Get($"menu.playPrairieKing")
+                hoverText = ModEntry.GetString($"menu.playPrairieKing")
             };
 
             _prairieKingButton.name = "Prairie King Button";
@@ -154,7 +151,7 @@ namespace FairMultiplayerCutsceneExperience
                 true
             )
             {
-                hoverText = _helper.Translation.Get($"menu.playJunimoKart")
+                hoverText = ModEntry.GetString($"menu.playJunimoKart")
             };
 
             _junimoKartButton.name = "Junimo Kart Button";
