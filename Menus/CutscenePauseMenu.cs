@@ -1,3 +1,4 @@
+using FairMultiplayerCutsceneExperience.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -31,8 +32,8 @@ namespace FairMultiplayerCutsceneExperience.Menus
             )
         {
             var playerMessage = GetPlayerMessage(initiatorPlayerName);
-            _messageLines = WrapText(playerMessage, width - Game1.tileSize * 2);
-            _tipLines = WrapText(tipMessage, width);
+            _messageLines = TextUtils.WrapText(playerMessage, width - Game1.tileSize * 2);
+            _tipLines = TextUtils.WrapText(tipMessage, width);
         }
 
         private static int CalculateMenuHeight(string[] spriteMessages, string[] smallMessages)
@@ -40,9 +41,10 @@ namespace FairMultiplayerCutsceneExperience.Menus
             var height = HeightWithoutPlayerLines;
 
             height += spriteMessages.Sum(message =>
-                Game1.tileSize * (WrapText(message, MenuWidth - Game1.tileSize * 2).Count - 1));
+                Game1.tileSize * (TextUtils.WrapText(message, MenuWidth - Game1.tileSize * 2).Count - 1));
 
-            height += smallMessages.Sum(message => Game1.tileSize / 2 * (WrapText(message, MenuWidth).Count - 1));
+            height += smallMessages.Sum(message =>
+                Game1.tileSize / 2 * (TextUtils.WrapText(message, MenuWidth).Count - 1));
 
             return height;
         }
@@ -272,67 +274,6 @@ namespace FairMultiplayerCutsceneExperience.Menus
                 exitThisMenuNoSound();
                 currentlySnappedComponent = null;
             }
-        }
-
-        private static List<string> WrapText(string text, int maxWidth)
-        {
-            var lines = new List<string>();
-            var words = text.Split(' ');
-            var currentLine = "";
-
-            foreach (var word in words)
-            {
-                if (SpriteText.getWidthOfString(word) > maxWidth)
-                {
-                    var truncatedWord = TruncateWord(word, maxWidth);
-                    if (!string.IsNullOrEmpty(currentLine))
-                    {
-                        lines.Add(currentLine);
-                        currentLine = "";
-                    }
-
-                    lines.Add(truncatedWord);
-                }
-                else
-                {
-                    var testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
-                    if (SpriteText.getWidthOfString(testLine) <= maxWidth)
-                    {
-                        currentLine = testLine;
-                    }
-                    else
-                    {
-                        lines.Add(currentLine);
-                        currentLine = word;
-                    }
-                }
-            }
-
-            if (!string.IsNullOrEmpty(currentLine))
-            {
-                lines.Add(currentLine);
-            }
-
-            return lines;
-        }
-
-        private static string TruncateWord(string word, int maxWidth)
-        {
-            var truncatedWord = "";
-            foreach (var c in word)
-            {
-                var testWord = truncatedWord + c;
-                if (SpriteText.getWidthOfString(testWord + "...") <= maxWidth)
-                {
-                    truncatedWord = testWord;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            return truncatedWord + "...";
         }
     }
 }

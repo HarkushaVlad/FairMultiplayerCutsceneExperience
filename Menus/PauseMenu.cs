@@ -1,3 +1,4 @@
+using FairMultiplayerCutsceneExperience.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewValley;
@@ -28,7 +29,7 @@ namespace FairMultiplayerCutsceneExperience.Menus
         {
             var height = BaseHeight;
 
-            _tipLines = WrapText(tipMessage ?? ModEntry.GetRandomTip(), MenuWidth);
+            _tipLines = TextUtils.WrapText(tipMessage ?? ModEntry.GetRandomTip(), MenuWidth);
 
             height += Game1.tileSize / 2 * (_tipLines.Count - 1);
 
@@ -71,67 +72,6 @@ namespace FairMultiplayerCutsceneExperience.Menus
                 spriteBatch.DrawString(Game1.smallFont, line, new Vector2(tipX, tipY), Color.Black);
                 tipY += Game1.tileSize / 2;
             }
-        }
-
-        private static List<string> WrapText(string text, int maxWidth)
-        {
-            var lines = new List<string>();
-            var words = text.Split(' ');
-            var currentLine = "";
-
-            foreach (var word in words)
-            {
-                if (SpriteText.getWidthOfString(word) > maxWidth)
-                {
-                    var truncatedWord = TruncateWord(word, maxWidth);
-                    if (!string.IsNullOrEmpty(currentLine))
-                    {
-                        lines.Add(currentLine);
-                        currentLine = "";
-                    }
-
-                    lines.Add(truncatedWord);
-                }
-                else
-                {
-                    var testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
-                    if (SpriteText.getWidthOfString(testLine) <= maxWidth)
-                    {
-                        currentLine = testLine;
-                    }
-                    else
-                    {
-                        lines.Add(currentLine);
-                        currentLine = word;
-                    }
-                }
-            }
-
-            if (!string.IsNullOrEmpty(currentLine))
-            {
-                lines.Add(currentLine);
-            }
-
-            return lines;
-        }
-
-        private static string TruncateWord(string word, int maxWidth)
-        {
-            var truncatedWord = "";
-            foreach (var c in word)
-            {
-                var testWord = truncatedWord + c;
-                if (SpriteText.getWidthOfString(testWord + "...") <= maxWidth)
-                {
-                    truncatedWord = testWord;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            return truncatedWord + "...";
         }
     }
 }
