@@ -18,22 +18,22 @@ namespace FairMultiplayerCutsceneExperience
         private const string MessageTypeEndPause = "endPause";
         private const string MessageTypeResetPauseState = "resetPauseState";
 
-        public static IModHelper StaticHelper { get; private set; } = null!;
-
         internal static ButtonState PreviousLeftButtonState = ButtonState.Released;
-        private static readonly HashSet<long> CutsceneInitiators = new();
+        internal static readonly HashSet<long> CutsceneInitiators = new();
+
+        private static IModHelper _staticHelper = null!;
+        private static IMonitor _monitor = null!;
         private static string? _hostModVersion;
         private static string? _currTip;
-        private static DateTime? _blockTimeStamp;
 
         public override void Entry(IModHelper helper)
         {
-            StaticHelper = helper;
+            _staticHelper = helper;
+            _monitor = Monitor;
 
             var harmony = new Harmony(ModManifest.UniqueID);
             harmony.PatchAll();
 
-            helper.Events.GameLoop.OneSecondUpdateTicked += OnUpdateTicked;
             helper.Events.Display.RenderingHud += OnRenderingHud;
             helper.Events.Multiplayer.ModMessageReceived += OnModMessageReceived;
             helper.Events.GameLoop.DayStarted += OnDayStarted;
@@ -75,66 +75,6 @@ namespace FairMultiplayerCutsceneExperience
 
             ResetPauseState();
             SendResetPauseStateToAll();
-        }
-
-        private void OnUpdateTicked(object? sender, OneSecondUpdateTickedEventArgs e)
-        {
-            if (!Context.IsWorldReady)
-                return;
-
-            // If the reset command was recently used, check if enough time has passed before proceeding
-            if (_blockTimeStamp != null)
-            {
-                var timeDifference = DateTime.Now - _blockTimeStamp.Value;
-                if (timeDifference.TotalSeconds >= 2)
-                {
-                    _blockTimeStamp = null;
-                }
-                else
-                {
-                    return;
-                }
-            }
-
-            // If a cutscene has started
-            if (Game1.CurrentEvent != null && !Game1.CurrentEvent.skipped)
-            {
-                var initiator = Game1.CurrentEvent.farmer;
-                if (initiator == null)
-                    return;
-
-                var playerId = initiator.UniqueMultiplayerID;
-
-                // If the player is not already in a cutscene and the event is a cutscene
-                if (!IsPlayerInCutscene(playerId) && Game1.CurrentEvent.skippable)
-                {
-                    string message = GetString("message.startCutscene", new { initiator.Name });
-                    BroadcastMessage(message);
-
-                    CutsceneInitiators.Add(playerId);
-
-                    SendStartPauseMessageToAll(playerId);
-                }
-
-                return;
-            }
-
-            // Check if a cutscene was active but has now ended or been skipped
-            if (IsCutsceneActive() &&
-                IsPlayerInCutscene(Game1.player.UniqueMultiplayerID) &&
-                (Game1.CurrentEvent == null || Game1.CurrentEvent.skipped))
-            {
-                SendEndPauseMessageToAll(Game1.player.UniqueMultiplayerID);
-
-                CutsceneInitiators.Remove(Game1.player.UniqueMultiplayerID);
-
-                // If there is someone else still in the cutscene, start the pause
-                if (IsCutsceneActive())
-                    StartPause();
-
-                string message = GetString("message.finishCutscene", new { Game1.player.Name });
-                BroadcastMessage(message);
-            }
         }
 
         private void OnDayStarted(object? sender, DayStartedEventArgs e)
@@ -270,8 +210,6 @@ namespace FairMultiplayerCutsceneExperience
 
         private void ResetPauseState()
         {
-            _blockTimeStamp = DateTime.Now;
-
             PreviousLeftButtonState = ButtonState.Released;
 
             if (IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
@@ -289,59 +227,59 @@ namespace FairMultiplayerCutsceneExperience
             Monitor.Log(GetString("command.resetCommandResult"), LogLevel.Info);
         }
 
-        private void BroadcastMessage(string message, bool isWarning = false)
+        public static void BroadcastMessage(string message, bool isWarning = false)
         {
-            Monitor.Log(message, isWarning ? LogLevel.Warn : LogLevel.Info);
+            _monitor.Log(message, isWarning ? LogLevel.Warn : LogLevel.Info);
             Game1.chatBox.addMessage(message, isWarning ? Color.Orange : Color.Gold);
             SendChatMessageToAll(message, isWarning);
         }
 
-        private void SendChatMessageToAll(string message, bool isError = false)
+        public static void SendChatMessageToAll(string message, bool isError = false)
         {
-            StaticHelper.Multiplayer.SendMessage(
+            _staticHelper.Multiplayer.SendMessage(
                 message: (message, isError),
                 messageType: MessageTypeSendChatMessage,
-                modIDs: new[] { ModManifest.UniqueID }
+                modIDs: new[] { _staticHelper.ModRegistry.ModID }
             );
         }
 
-        private void SendStartPauseMessageToAll(long initiatorId)
+        public static void SendStartPauseMessageToAll(long initiatorId)
         {
-            StaticHelper.Multiplayer.SendMessage(
+            _staticHelper.Multiplayer.SendMessage(
                 message: initiatorId,
                 messageType: MessageTypeStartPause,
-                modIDs: new[] { ModManifest.UniqueID }
+                modIDs: new[] { _staticHelper.ModRegistry.ModID }
             );
         }
 
-        private void SendSpecificStartPauseMessage(long playerId, long initiatorId)
+        public static void SendSpecificStartPauseMessage(long playerId, long initiatorId)
         {
-            StaticHelper.Multiplayer.SendMessage(
+            _staticHelper.Multiplayer.SendMessage(
                 message: (playerId, initiatorId),
                 messageType: MessageTypeSpecificStartPause,
-                modIDs: new[] { ModManifest.UniqueID }
+                modIDs: new[] { _staticHelper.ModRegistry.ModID }
             );
         }
 
-        private void SendEndPauseMessageToAll(long initiatorId)
+        public static void SendEndPauseMessageToAll(long initiatorId)
         {
-            StaticHelper.Multiplayer.SendMessage(
+            _staticHelper.Multiplayer.SendMessage(
                 message: initiatorId,
                 messageType: MessageTypeEndPause,
-                modIDs: new[] { ModManifest.UniqueID }
+                modIDs: new[] { _staticHelper.ModRegistry.ModID }
             );
         }
 
-        private void SendResetPauseStateToAll()
+        public static void SendResetPauseStateToAll()
         {
-            StaticHelper.Multiplayer.SendMessage(
+            _staticHelper.Multiplayer.SendMessage(
                 message: MessageTypeResetPauseState,
                 messageType: MessageTypeResetPauseState,
-                modIDs: new[] { ModManifest.UniqueID }
+                modIDs: new[] { _staticHelper.ModRegistry.ModID }
             );
         }
 
-        private void StartPause()
+        public static void StartPause()
         {
             var initiatorName = Game1.getOnlineFarmers()
                 .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name;
@@ -352,7 +290,7 @@ namespace FairMultiplayerCutsceneExperience
             MenuStack.PushMenu(new CutscenePauseMenu(initiatorName, _currTip));
         }
 
-        private static void EndPause()
+        public static void EndPause()
         {
             Game1.currentMinigame?.unload();
             Game1.currentMinigame = null;
@@ -360,19 +298,19 @@ namespace FairMultiplayerCutsceneExperience
             _currTip = null;
         }
 
-        private static bool IsPlayerInCutscene(long playerId)
+        public static bool IsPlayerInCutscene(long playerId)
         {
             return CutsceneInitiators.Contains(playerId);
         }
 
-        private static bool IsCutsceneActive()
+        public static bool IsCutsceneActive()
         {
             return CutsceneInitiators.Count > 0;
         }
 
         public static string GetString(string key, object? tokens = null)
         {
-            return StaticHelper.Translation.Get(key, tokens);
+            return _staticHelper.Translation.Get(key, tokens);
         }
 
         public static string GetRandomTip()
