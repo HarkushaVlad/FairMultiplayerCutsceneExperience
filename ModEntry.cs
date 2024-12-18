@@ -1,3 +1,4 @@
+using FairMultiplayerCutsceneExperience.Config;
 using FairMultiplayerCutsceneExperience.Menus;
 using FairMultiplayerCutsceneExperience.Utils;
 using HarmonyLib;
@@ -18,18 +19,20 @@ namespace FairMultiplayerCutsceneExperience
         private const string MessageTypeEndPause = "endPause";
         private const string MessageTypeResetPauseState = "resetPauseState";
 
-        internal static ButtonState PreviousLeftButtonState = ButtonState.Released;
-        internal static readonly HashSet<long> CutsceneInitiators = new();
+        public static ButtonState PreviousLeftButtonState = ButtonState.Released;
+        public static readonly HashSet<long> CutsceneInitiators = new();
+        public static IModHelper StaticHelper = null!;
 
-        private static IModHelper _staticHelper = null!;
         private static IMonitor _monitor = null!;
+        private static ModConfig _config = null!;
         private static string? _hostModVersion;
         private static string? _currTip;
 
         public override void Entry(IModHelper helper)
         {
-            _staticHelper = helper;
+            StaticHelper = helper;
             _monitor = Monitor;
+            _config = helper.ReadConfig<ModConfig>();
 
             var harmony = new Harmony(ModManifest.UniqueID);
             harmony.PatchAll();
@@ -39,6 +42,7 @@ namespace FairMultiplayerCutsceneExperience
             helper.Events.GameLoop.DayStarted += OnDayStarted;
             helper.Events.Multiplayer.PeerConnected += OnPeerConnected;
             helper.Events.Multiplayer.PeerDisconnected += OnPeerDisconnected;
+            helper.Events.GameLoop.GameLaunched += OnGameLaunched;
 
             helper.ConsoleCommands.Add("reset", helper.Translation.Get("command.resetCommandDescription"),
                 ResetConsoleCommand);
@@ -49,6 +53,12 @@ namespace FairMultiplayerCutsceneExperience
                 name => helper.Translation.Get("command.resetCommandDescription"),
                 cheatsOnly: false
             );
+        }
+
+        private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
+        {
+            if (StaticHelper.ModRegistry.IsLoaded("spacechase0.GenericModConfigMenu"))
+                SetupGenericModConfigMenu();
         }
 
         private void ResetChatBoxCommand(string[] args, ChatBox chat)
@@ -236,46 +246,46 @@ namespace FairMultiplayerCutsceneExperience
 
         public static void SendChatMessageToAll(string message, bool isError = false)
         {
-            _staticHelper.Multiplayer.SendMessage(
+            StaticHelper.Multiplayer.SendMessage(
                 message: (message, isError),
                 messageType: MessageTypeSendChatMessage,
-                modIDs: new[] { _staticHelper.ModRegistry.ModID }
+                modIDs: new[] { StaticHelper.ModRegistry.ModID }
             );
         }
 
         public static void SendStartPauseMessageToAll(long initiatorId)
         {
-            _staticHelper.Multiplayer.SendMessage(
+            StaticHelper.Multiplayer.SendMessage(
                 message: initiatorId,
                 messageType: MessageTypeStartPause,
-                modIDs: new[] { _staticHelper.ModRegistry.ModID }
+                modIDs: new[] { StaticHelper.ModRegistry.ModID }
             );
         }
 
         public static void SendSpecificStartPauseMessage(long playerId, long initiatorId)
         {
-            _staticHelper.Multiplayer.SendMessage(
+            StaticHelper.Multiplayer.SendMessage(
                 message: (playerId, initiatorId),
                 messageType: MessageTypeSpecificStartPause,
-                modIDs: new[] { _staticHelper.ModRegistry.ModID }
+                modIDs: new[] { StaticHelper.ModRegistry.ModID }
             );
         }
 
         public static void SendEndPauseMessageToAll(long initiatorId)
         {
-            _staticHelper.Multiplayer.SendMessage(
+            StaticHelper.Multiplayer.SendMessage(
                 message: initiatorId,
                 messageType: MessageTypeEndPause,
-                modIDs: new[] { _staticHelper.ModRegistry.ModID }
+                modIDs: new[] { StaticHelper.ModRegistry.ModID }
             );
         }
 
         public static void SendResetPauseStateToAll()
         {
-            _staticHelper.Multiplayer.SendMessage(
+            StaticHelper.Multiplayer.SendMessage(
                 message: MessageTypeResetPauseState,
                 messageType: MessageTypeResetPauseState,
-                modIDs: new[] { _staticHelper.ModRegistry.ModID }
+                modIDs: new[] { StaticHelper.ModRegistry.ModID }
             );
         }
 
@@ -310,12 +320,33 @@ namespace FairMultiplayerCutsceneExperience
 
         public static string GetString(string key, object? tokens = null)
         {
-            return _staticHelper.Translation.Get(key, tokens);
+            return StaticHelper.Translation.Get(key, tokens);
         }
 
         public static string GetRandomTip()
         {
             return GetString($"tips.tip{new Random().Next(1, 37)}");
+        }
+
+        private void SetupGenericModConfigMenu()
+        {
+            var gmcmApi = Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
+            if (gmcmApi == null)
+                return;
+
+            gmcmApi.Register(
+                mod: ModManifest,
+                reset: () => _config = new ModConfig(),
+                save: () => Helper.WriteConfig(_config)
+            );
+
+            gmcmApi.AddBoolOption(
+                mod: ModManifest,
+                name: () => "Enable custom pause menu on /pause command",
+                tooltip: () => "Allow opening the custom pause menu when the /pause command is executed.",
+                getValue: () => _config.EnablePauseMenu,
+                setValue: value => _config.EnablePauseMenu = value
+            );
         }
     }
 }
