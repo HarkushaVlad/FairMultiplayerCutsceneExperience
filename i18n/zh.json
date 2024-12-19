@@ -12,6 +12,8 @@
   "menu.whileWait": "在你等待事件动画结束的时候:",
   "menu.playPrairieKing": "玩草原之王",
   "menu.playJunimoKart": "玩祝尼魔赛车",
+  "config.option.EnablePauseMenu": "启用自定义暂停菜单（通过 /pause 命令）",
+  "config.option.EnablePauseMenu.tooltip": "允许在执行 /pause 命令时打开自定义暂停菜单.",
   "tips.tip1": "插入'Xbox One'或'Xbox 360'手柄,激活游戏手柄模式.",
   "tips.tip2": "赠送礼物是与星露谷居民交朋友的好方法.",
   "tips.tip3": "按住Shift键,一次可购买5件商品.",

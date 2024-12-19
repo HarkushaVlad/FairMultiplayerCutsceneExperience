@@ -342,8 +342,8 @@ namespace FairMultiplayerCutsceneExperience
 
             gmcmApi.AddBoolOption(
                 mod: ModManifest,
-                name: () => "Enable custom pause menu on /pause command",
-                tooltip: () => "Allow opening the custom pause menu when the /pause command is executed.",
+                name: () => GetString("config.option.EnablePauseMenu"),
+                tooltip: () => GetString("config.option.EnablePauseMenu.tooltip"),
                 getValue: () => _config.EnablePauseMenu,
                 setValue: value => _config.EnablePauseMenu = value
             );
