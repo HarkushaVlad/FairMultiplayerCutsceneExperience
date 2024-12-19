@@ -17,6 +17,10 @@ mini-games to keep waiting players engaged.
 **Note**: If you're planning to play only in local co-op, the Pause Time in Multiplayer Revived mod is not required, as
 the game will automatically pause the time when the pause menu is opened during cutscenes.
 
+When the /pause command is used, a pause menu will appear displaying a random tip. This feature is customizable and can
+be disabled by adjusting the configuration file or using
+the [Generic Mod Config Menu](https://www.nexusmods.com/stardewvalley/mods/5098).
+
 ## Install
 
 1. Install the latest version of [SMAPI](https://smapi.io).
@@ -34,28 +38,36 @@ the game will automatically pause the time when the pause menu is opened during 
 
 ## How to Use
 
-1. **Start a Multiplayer Game**  
+1. **All players must have the mod installed**  
+   If a player does not have the mod, they will not be restricted during cutscenes and will be able to move and interact
+   with the game as usual.
+
+2. **Start a Multiplayer Game**  
    Once the mod is installed, simply start a multiplayer game as you normally would.
 
-2. **Triggering a Cutscene**  
+3. **Triggering a Cutscene**  
    When a player triggers a cutscene, a notification will appear for all connected players to inform them that a
    cutscene is happening. Other players will be unable to move during this time, ensuring they are not able to progress
    while the cutscene is playing.
 
-3. **Pause Menu, Mini-Games, and Tips**  
+4. **Pause Menu, Mini-Games, and Tips**  
    While the cutscene is active, the pause menu will automatically open for the other players. They will have the option
    to:
    - Choose a mini-game to stay engaged while waiting.
    - View helpful gameplay tips.  
      Once the cutscene ends, the pause menu will close, and the game will continue as normal.
 
-4. **Optionally Pause Time**  
+5. **Optionally Pause Time**  
    If you have installed the [Pause Time in Multiplayer Revived](https://www.nexusmods.com/stardewvalley/mods/21327)
    mod, the game time will also be paused while the cutscene is playing, ensuring no progress is made during that time (
    the host must enable the **"Any cutscene pauses"** option in the Pause Time in Multiplayer Revived settings — see
    Step 3 in the "Install" section).  
    If you are playing in local co-op, the game will automatically pause time when the pause menu opens, and the Pause
    Time in Multiplayer Revived mod is not required.
+6. **Reset Command**  
+   The host has access to the */reset* command, which is designed for extreme cases where something goes wrong. This
+   command resets all pause states for all players and forcibly ends any active cutscenes. It can be executed via the
+   in-game chat or the console(*reset*) and is useful as a fallback to ensure the game continues smoothly.
 
 ## Compatibility
 
