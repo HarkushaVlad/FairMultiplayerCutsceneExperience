@@ -1,7 +1,7 @@
 {
   "Name": "Fair Multiplayer Cutscene Experience",
   "Author": "Reprodudix",
-  "Version": "1.3.0",
+  "Version": "1.3.1",
   "Description": "Blocks player movement during cutscenes in multiplayer, ensuring a fair experience for all.",
   "UniqueID": "Reprodudix.FairMultiplayerCutsceneExperience",
   "EntryDll": "FairMultiplayerCutsceneExperience.dll",
