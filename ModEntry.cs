@@ -37,6 +37,7 @@ namespace FairMultiplayerCutsceneExperience
             var harmony = new Harmony(ModManifest.UniqueID);
             harmony.PatchAll();
 
+            helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
             helper.Events.Display.RenderingHud += OnRenderingHud;
             helper.Events.Multiplayer.ModMessageReceived += OnModMessageReceived;
             helper.Events.GameLoop.DayStarted += OnDayStarted;
@@ -59,6 +60,25 @@ namespace FairMultiplayerCutsceneExperience
         {
             if (StaticHelper.ModRegistry.IsLoaded("spacechase0.GenericModConfigMenu"))
                 SetupGenericModConfigMenu();
+        }
+
+        private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
+        {
+            if (!Context.IsWorldReady || !StaticHelper.ReadConfig<ModConfig>().EnablePauseMenu || IsCutsceneActive())
+                return;
+
+            if (Game1.netWorldState.Value.IsPaused && Game1.activeClickableMenu is not PauseMenu)
+            {
+                if (String.IsNullOrEmpty(_currTip))
+                    _currTip = GetRandomTip();
+
+                MenuStack.PushMenu(new PauseMenu(_currTip));
+            }
+            else if (!Game1.netWorldState.Value.IsPaused && Game1.activeClickableMenu is PauseMenu)
+            {
+                MenuStack.PopMenu();
+                _currTip = null;
+            }
         }
 
         private void ResetChatBoxCommand(string[] args, ChatBox chat)
