@@ -16,6 +16,7 @@ namespace FairMultiplayerCutsceneExperience.Menus
 
         private readonly List<string> _messageLines;
         private readonly List<string> _tipLines;
+        private ClickableTextureComponent? _inventoryButton;
         private ClickableTextureComponent? _prairieKingButton;
         private ClickableTextureComponent? _junimoKartButton;
 
@@ -68,6 +69,8 @@ namespace FairMultiplayerCutsceneExperience.Menus
             DrawTip(spriteBatch, currentYPosition + Game1.tileSize * 3);
             DrawJunimoKartButton(spriteBatch, currentYPosition);
             DrawPrairieKingButton(spriteBatch, currentYPosition);
+            DrawInventoryButton(spriteBatch,
+                yPositionOnScreen + Game1.tileSize + Game1.tileSize / 2 + Game1.tileSize / 6);
             HandleCursorType(spriteBatch);
             base.draw(spriteBatch);
         }
@@ -114,6 +117,39 @@ namespace FairMultiplayerCutsceneExperience.Menus
             return startY + Game1.tileSize + Game1.tileSize / 2;
         }
 
+        private void DrawInventoryButton(SpriteBatch spriteBatch, int buttonY)
+        {
+            var buttonX = xPositionOnScreen + MenuWidth - Game1.tileSize - Game1.tileSize / 3;
+
+            _inventoryButton = new ClickableTextureComponent(
+                new Rectangle
+                (
+                    buttonX,
+                    buttonY,
+                    Game1.tileSize / 2 + Game1.tileSize / 5,
+                    Game1.tileSize / 2 + Game1.tileSize / 5
+                ),
+                Game1.content.Load<Texture2D>("LooseSprites/Cursors"),
+                new Rectangle(127, 412, 10, 11),
+                4f,
+                true
+            )
+            {
+                hoverText = ModEntry.GetString("menu.openInventory"),
+            };
+
+            _inventoryButton.name = "Inventory Button";
+            _inventoryButton.myID = 0;
+
+            _inventoryButton.draw(spriteBatch);
+
+            if (_inventoryButton.containsPoint(Game1.getMouseX(), Game1.getMouseY()))
+            {
+                drawHoverText(spriteBatch, _inventoryButton.hoverText, Game1.dialogueFont);
+                HandleButtonClick(new GameMenu());
+            }
+        }
+
         private void DrawPrairieKingButton(SpriteBatch spriteBatch, int buttonY)
         {
             var buttonX = xPositionOnScreen + width / 2 - Game1.tileSize - Game1.tileSize / 2;
@@ -130,7 +166,7 @@ namespace FairMultiplayerCutsceneExperience.Menus
             };
 
             _prairieKingButton.name = "Prairie King Button";
-            _prairieKingButton.myID = 0;
+            _prairieKingButton.myID = 1;
 
             _prairieKingButton.draw(spriteBatch);
 
@@ -157,7 +193,7 @@ namespace FairMultiplayerCutsceneExperience.Menus
             };
 
             _junimoKartButton.name = "Junimo Kart Button";
-            _junimoKartButton.myID = 1;
+            _junimoKartButton.myID = 2;
 
             _junimoKartButton.draw(spriteBatch);
 
@@ -180,6 +216,10 @@ namespace FairMultiplayerCutsceneExperience.Menus
 
         private void HandleCursorType(SpriteBatch spriteBatch)
         {
+            var isInventoryButtonHovered = _inventoryButton != null &&
+                                           _inventoryButton.containsPoint(Game1.getMouseX(),
+                                               Game1.getMouseY());
+
             var isPrairieKingButtonHovered = _prairieKingButton != null &&
                                              _prairieKingButton.containsPoint(Game1.getMouseX(),
                                                  Game1.getMouseY());
@@ -187,7 +227,7 @@ namespace FairMultiplayerCutsceneExperience.Menus
             var isJunimoKartButton = _junimoKartButton != null &&
                                      _junimoKartButton.containsPoint(Game1.getMouseX(), Game1.getMouseY());
 
-            if (isPrairieKingButtonHovered || isJunimoKartButton)
+            if (isInventoryButtonHovered || isPrairieKingButtonHovered || isJunimoKartButton)
             {
                 Game1.mouseCursor = Game1.cursor_gamepad_pointer;
                 drawMouse(spriteBatch, false, Game1.cursor_gamepad_pointer);
@@ -216,49 +256,96 @@ namespace FairMultiplayerCutsceneExperience.Menus
             }
         }
 
+        private void HandleButtonClick(IClickableMenu menu)
+        {
+            if (Game1.input.GetMouseState().LeftButton == ButtonState.Pressed &&
+                ModEntry.PreviousLeftButtonState == ButtonState.Released)
+            {
+                Game1.activeClickableMenu = menu;
+                ModEntry.PreviousLeftButtonState = ButtonState.Pressed;
+            }
+
+            if (Game1.input.GetMouseState().LeftButton == ButtonState.Released)
+            {
+                ModEntry.PreviousLeftButtonState = ButtonState.Released;
+            }
+        }
+
         public override void snapCursorToCurrentSnappedComponent()
         {
             if (currentlySnappedComponent == null)
                 return;
 
-            Game1.setMousePosition(
+            Game1.setMousePosition
+            (
                 currentlySnappedComponent.bounds.Right - currentlySnappedComponent.bounds.Width / 4,
-                currentlySnappedComponent.bounds.Bottom - currentlySnappedComponent.bounds.Height / 2, true);
+                currentlySnappedComponent.bounds.Bottom - currentlySnappedComponent.bounds.Height / 2,
+                true
+            );
         }
 
         public override void receiveGamePadButton(Buttons b)
         {
             base.receiveGamePadButton(b);
 
-            List<ClickableComponent?> menuButtons = new() { _prairieKingButton, _junimoKartButton };
+            List<ClickableComponent?> minigameButtons = new() { _prairieKingButton, _junimoKartButton };
 
-            if ((b == Buttons.DPadRight || b == Buttons.DPadLeft || b == Buttons.DPadUp || b == Buttons.DPadDown) &&
-                menuButtons.Count > 0)
+            if (b is Buttons.DPadUp or Buttons.DPadDown)
             {
                 if (currentlySnappedComponent == null)
                 {
-                    currentlySnappedComponent = menuButtons.First();
+                    currentlySnappedComponent = _inventoryButton;
                     return;
                 }
 
-                if (b == Buttons.DPadUp || b == Buttons.DPadDown)
+                if (currentlySnappedComponent?.myID == _inventoryButton?.myID && b == Buttons.DPadDown)
+                {
+                    currentlySnappedComponent = minigameButtons.First();
+                    return;
+                }
+
+                if (currentlySnappedComponent?.myID != _inventoryButton?.myID && b == Buttons.DPadUp)
+                {
+                    currentlySnappedComponent = _inventoryButton;
+                    return;
+                }
+            }
+
+            if (b is Buttons.DPadRight or Buttons.DPadLeft)
+            {
+                if (currentlySnappedComponent == null)
+                {
+                    currentlySnappedComponent = minigameButtons.First();
+                    return;
+                }
+
+                if (currentlySnappedComponent?.myID == _inventoryButton?.myID)
                 {
                     snapCursorToCurrentSnappedComponent();
                     return;
                 }
 
-                var currentIndex = menuButtons.FindIndex(clickableComponent =>
+                var currentIndex = minigameButtons.FindIndex(clickableComponent =>
                     clickableComponent?.myID == currentlySnappedComponent?.myID);
 
-                var nextIndex = (currentIndex + (b == Buttons.DPadRight ? 1 : -1) + menuButtons.Count) %
-                                menuButtons.Count;
+                var nextIndex = (currentIndex + (b == Buttons.DPadRight ? 1 : -1) + minigameButtons.Count) %
+                                minigameButtons.Count;
 
-                currentlySnappedComponent = menuButtons[nextIndex];
+                currentlySnappedComponent = minigameButtons[nextIndex];
+
+                return;
             }
 
-            if (_junimoKartButton != null &&
-                currentlySnappedComponent?.myID == _junimoKartButton?.myID &&
+            if (_inventoryButton != null &&
+                currentlySnappedComponent?.myID == _inventoryButton?.myID &&
                 b == Buttons.A)
+            {
+                Game1.activeClickableMenu = new GameMenu();
+                currentlySnappedComponent = null;
+            }
+            else if (_junimoKartButton != null &&
+                     currentlySnappedComponent?.myID == _junimoKartButton?.myID &&
+                     b == Buttons.A)
             {
                 Game1.playSound("coin");
                 OpenJunimoCartMinigame();
