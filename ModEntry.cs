@@ -14,6 +14,8 @@ namespace FairMultiplayerCutsceneExperience
     internal sealed class ModEntry : Mod
     {
         private const string MessageTypeSendChatMessage = "sendChatMessage";
+        private const string MessageTypeOpenPauseMenu = "openPauseMenu";
+        private const string MessageTypeClosePauseMenu = "closePauseMenu";
         private const string MessageTypeStartPause = "startPause";
         private const string MessageTypeSpecificStartPause = "specificStartPause";
         private const string MessageTypeEndPause = "endPause";
@@ -37,7 +39,6 @@ namespace FairMultiplayerCutsceneExperience
             var harmony = new Harmony(ModManifest.UniqueID);
             harmony.PatchAll();
 
-            helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
             helper.Events.Display.RenderingHud += OnRenderingHud;
             helper.Events.Multiplayer.ModMessageReceived += OnModMessageReceived;
             helper.Events.GameLoop.DayStarted += OnDayStarted;
@@ -60,25 +61,6 @@ namespace FairMultiplayerCutsceneExperience
         {
             if (StaticHelper.ModRegistry.IsLoaded("spacechase0.GenericModConfigMenu"))
                 SetupGenericModConfigMenu();
-        }
-
-        private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
-        {
-            if (!Context.IsWorldReady || !StaticHelper.ReadConfig<ModConfig>().EnablePauseMenu || IsCutsceneActive())
-                return;
-
-            if (Game1.netWorldState.Value.IsPaused && Game1.activeClickableMenu is not PauseMenu)
-            {
-                if (String.IsNullOrEmpty(_currTip))
-                    _currTip = GetRandomTip();
-
-                MenuStack.PushMenu(new PauseMenu(_currTip));
-            }
-            else if (!Game1.netWorldState.Value.IsPaused && Game1.activeClickableMenu is PauseMenu)
-            {
-                MenuStack.PopMenu();
-                _currTip = null;
-            }
         }
 
         private void ResetChatBoxCommand(string[] args, ChatBox chat)
@@ -190,6 +172,22 @@ namespace FairMultiplayerCutsceneExperience
                     Monitor.Log(messageTuple.Item1, messageTuple.Item2 ? LogLevel.Warn : LogLevel.Info);
                     Game1.chatBox.addMessage(messageTuple.Item1, messageTuple.Item2 ? Color.Orange : Color.Gold);
                     break;
+                case MessageTypeOpenPauseMenu:
+                    // Open pause menu with random tip on /pause command
+                    if (StaticHelper.ReadConfig<ModConfig>().EnablePauseMenu)
+                    {
+                        MenuStack.PushMenu(new PauseMenu());
+                    }
+
+                    break;
+                case MessageTypeClosePauseMenu:
+                    // Close pause menu with random tip on /pause or /resume command
+                    if (StaticHelper.ReadConfig<ModConfig>().EnablePauseMenu)
+                    {
+                        MenuStack.PopMenu();
+                    }
+
+                    break;
                 case MessageTypeStartPause:
                     // Handle starting the pause when a cutscene begins
                     // Read initiator id
@@ -269,6 +267,24 @@ namespace FairMultiplayerCutsceneExperience
             StaticHelper.Multiplayer.SendMessage(
                 message: (message, isError),
                 messageType: MessageTypeSendChatMessage,
+                modIDs: new[] { StaticHelper.ModRegistry.ModID }
+            );
+        }
+
+        public static void SendOpenPauseMenuMessageToAll()
+        {
+            StaticHelper.Multiplayer.SendMessage(
+                message: MessageTypeOpenPauseMenu,
+                messageType: MessageTypeOpenPauseMenu,
+                modIDs: new[] { StaticHelper.ModRegistry.ModID }
+            );
+        }
+
+        public static void SendClosePauseMenuMessageToAll()
+        {
+            StaticHelper.Multiplayer.SendMessage(
+                message: MessageTypeClosePauseMenu,
+                messageType: MessageTypeClosePauseMenu,
                 modIDs: new[] { StaticHelper.ModRegistry.ModID }
             );
         }

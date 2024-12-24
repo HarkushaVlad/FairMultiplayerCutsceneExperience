@@ -1,6 +1,7 @@
 using FairMultiplayerCutsceneExperience.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using StardewValley;
 using StardewValley.BellsAndWhistles;
 using StardewValley.Menus;
@@ -72,6 +73,22 @@ namespace FairMultiplayerCutsceneExperience.Menus
                 spriteBatch.DrawString(Game1.smallFont, line, new Vector2(tipX, tipY), Color.Black);
                 tipY += Game1.tileSize / 2;
             }
+        }
+
+        public override void receiveKeyPress(Keys key)
+        {
+            if (!Game1.player.IsMainPlayer && key is Keys.Escape or Keys.E)
+                return;
+
+            base.receiveKeyPress(key);
+        }
+
+        public override void receiveGamePadButton(Buttons b)
+        {
+            if (b is Buttons.B or Buttons.Y or Buttons.Start)
+                return;
+
+            base.receiveGamePadButton(b);
         }
     }
 }
