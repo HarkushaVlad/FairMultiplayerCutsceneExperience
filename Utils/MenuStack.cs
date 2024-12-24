@@ -19,5 +19,10 @@ namespace FairMultiplayerCutsceneExperience.Utils
         {
             Game1.activeClickableMenu = MenuStackStorage.Count > 0 ? MenuStackStorage.Pop() : null;
         }
+
+        public static void Clear()
+        {
+            MenuStackStorage.Clear();
+        }
     }
 }

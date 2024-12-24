@@ -242,13 +242,16 @@ namespace FairMultiplayerCutsceneExperience
 
             if (IsPlayerInCutscene(Game1.player.UniqueMultiplayerID))
             {
-                Game1.CurrentEvent.skipEvent();
-                Game1.CurrentEvent.exitEvent();
+                Game1.CurrentEvent?.skipEvent();
+                Game1.CurrentEvent?.exitEvent();
             }
 
             CutsceneInitiators.Clear();
 
-            EndPause();
+            Game1.currentMinigame?.unload();
+            Game1.currentMinigame = null;
+            Game1.activeClickableMenu = null;
+            _currTip = null;
 
             Game1.chatBox.addMessage(
                 $"[{ModManifest.Name}] " + GetString("command.resetCommandResult"), Color.Gold);
