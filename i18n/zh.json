@@ -10,6 +10,7 @@
   "menu.player": "玩家",
   "menu.inCutscene": "{{name}}当前正在播放事件动画!",
   "menu.whileWait": "在你等待事件动画结束的时候:",
+  "menu.openInventory": "打开库存",
   "menu.playPrairieKing": "玩草原之王",
   "menu.playJunimoKart": "玩祝尼魔赛车",
   "config.option.EnablePauseMenu": "启用 /pause 命令中的菜单",

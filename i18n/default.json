@@ -10,6 +10,7 @@
   "menu.player": "Player",
   "menu.inCutscene": "{{name}} is currently in a cutscene!",
   "menu.whileWait": "While you wait for the cutscene to finish:",
+  "menu.openInventory": "Open inventory",
   "menu.playPrairieKing": "Play Journey of The Prairie King",
   "menu.playJunimoKart": "Play Junimo Kart",
   "config.option.EnablePauseMenu": "Enable menu on /pause",
