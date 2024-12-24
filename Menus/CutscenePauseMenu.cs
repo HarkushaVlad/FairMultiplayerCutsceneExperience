@@ -284,8 +284,19 @@ namespace FairMultiplayerCutsceneExperience.Menus
             );
         }
 
+        public override void receiveKeyPress(Keys key)
+        {
+            if (key is Keys.Escape or Keys.E)
+                return;
+
+            base.receiveKeyPress(key);
+        }
+
         public override void receiveGamePadButton(Buttons b)
         {
+            if (b is Buttons.B or Buttons.Y or Buttons.Start)
+                return;
+
             base.receiveGamePadButton(b);
 
             List<ClickableComponent?> minigameButtons = new() { _prairieKingButton, _junimoKartButton };
