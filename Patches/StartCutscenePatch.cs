@@ -15,9 +15,9 @@ namespace FairMultiplayerCutsceneExperience.Patches
             );
         }
 
-        public static void Postfix(GameLocation location, GameTime time)
+        public static void Postfix(GameLocation location, GameTime time, Event __instance)
         {
-            if (Game1.player == null)
+            if (Game1.player == null || __instance.isFestival)
                 return;
 
             var playerId = Game1.player.UniqueMultiplayerID;
