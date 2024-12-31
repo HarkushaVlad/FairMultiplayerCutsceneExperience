@@ -3,9 +3,16 @@ using StardewValley;
 
 namespace FairMultiplayerCutsceneExperience.Patches
 {
-    [HarmonyPatch(typeof(Event), "exitEvent")]
     public static class EndCutscenePatch
     {
+        public static void ApplyPatch(Harmony harmony)
+        {
+            harmony.Patch(
+                original: AccessTools.Method(typeof(Event), "exitEvent"),
+                postfix: new HarmonyMethod(typeof(EndCutscenePatch), nameof(Postfix))
+            );
+        }
+
         public static void Postfix()
         {
             var playerId = Game1.player.UniqueMultiplayerID;

@@ -5,9 +5,16 @@ using StardewValley;
 
 namespace FairMultiplayerCutsceneExperience.Patches
 {
-    [HarmonyPatch(typeof(Event), "InitializeEvent")]
     public static class StartCutscenePatch
     {
+        public static void ApplyPatch(Harmony harmony)
+        {
+            harmony.Patch(
+                original: AccessTools.Method(typeof(Event), "InitializeEvent"),
+                postfix: new HarmonyMethod(typeof(StartCutscenePatch), nameof(Postfix))
+            );
+        }
+
         public static void Postfix(GameLocation location, GameTime time)
         {
             if (Game1.player == null)

@@ -1,5 +1,6 @@
 using FairMultiplayerCutsceneExperience.Config;
 using FairMultiplayerCutsceneExperience.Menus;
+using FairMultiplayerCutsceneExperience.Patches;
 using FairMultiplayerCutsceneExperience.Utils;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
@@ -37,7 +38,9 @@ namespace FairMultiplayerCutsceneExperience
             _config = helper.ReadConfig<ModConfig>();
 
             var harmony = new Harmony(ModManifest.UniqueID);
-            harmony.PatchAll();
+            EndCutscenePatch.ApplyPatch(harmony);
+            PauseCommandPatch.ApplyPatch(harmony);
+            StartCutscenePatch.ApplyPatch(harmony);
 
             helper.Events.Display.RenderingHud += OnRenderingHud;
             helper.Events.Multiplayer.ModMessageReceived += OnModMessageReceived;
