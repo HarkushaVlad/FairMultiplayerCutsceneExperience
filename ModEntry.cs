@@ -25,6 +25,7 @@ namespace FairMultiplayerCutsceneExperience
         public static ButtonState PreviousLeftButtonState = ButtonState.Released;
         public static readonly HashSet<long> CutsceneInitiators = new();
         public static IModHelper StaticHelper = null!;
+        private static bool _isInvincibilityAppliedByThisMod = false;
 
         private static IMonitor _monitor = null!;
         private static ModConfig _config = null!;
@@ -48,6 +49,7 @@ namespace FairMultiplayerCutsceneExperience
             helper.Events.Multiplayer.PeerConnected += OnPeerConnected;
             helper.Events.Multiplayer.PeerDisconnected += OnPeerDisconnected;
             helper.Events.GameLoop.GameLaunched += OnGameLaunched;
+            helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
 
             helper.ConsoleCommands.Add("reset", helper.Translation.Get("command.resetCommandDescription"),
                 ResetConsoleCommand);
@@ -58,6 +60,22 @@ namespace FairMultiplayerCutsceneExperience
                 name => helper.Translation.Get("command.resetCommandDescription"),
                 cheatsOnly: false
             );
+        }
+
+        private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
+        {
+            if (Context.IsWorldReady && e.IsMultipleOf(60))
+            {
+                bool isInvincible = Game1.player.temporarilyInvincible;
+                bool isFlashing = Game1.player.flashDuringThisTemporaryInvincibility;
+                int timer = Game1.player.temporaryInvincibilityTimer;
+                int duration = Game1.player.currentTemporaryInvincibilityDuration;
+
+                string debugMessage =
+                    $"[DEBUG] Inv: {isInvincible} | Flash: {isFlashing} | Timer: {timer} | Duration: {duration}";
+
+                Game1.chatBox.addMessage(debugMessage, Color.Violet);
+            }
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -333,10 +351,15 @@ namespace FairMultiplayerCutsceneExperience
 
         public static void StartPause()
         {
+            Game1.player.temporarilyInvincible = true;
+            Game1.player.flashDuringThisTemporaryInvincibility = true;
+            Game1.player.temporaryInvincibilityTimer = 0;
+            Game1.player.currentTemporaryInvincibilityDuration = 999999;
+
             var initiatorName = Game1.getOnlineFarmers()
                 .First(farmer => farmer.UniqueMultiplayerID == CutsceneInitiators.ToArray()[0]).Name;
 
-            if (String.IsNullOrEmpty(_currTip))
+            if (string.IsNullOrEmpty(_currTip))
                 _currTip = GetRandomTip();
 
             MenuStack.PushMenu(new CutscenePauseMenu(initiatorName, _currTip));
@@ -344,6 +367,11 @@ namespace FairMultiplayerCutsceneExperience
 
         public static void EndPause()
         {
+            Game1.player.temporarilyInvincible = false;
+            Game1.player.flashDuringThisTemporaryInvincibility = false;
+            Game1.player.temporaryInvincibilityTimer = 0;
+            Game1.player.currentTemporaryInvincibilityDuration = 0;
+
             Game1.currentMinigame?.unload();
             Game1.currentMinigame = null;
             MenuStack.PopMenu();
