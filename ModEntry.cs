@@ -25,7 +25,6 @@ namespace FairMultiplayerCutsceneExperience
         public static ButtonState PreviousLeftButtonState = ButtonState.Released;
         public static readonly HashSet<long> CutsceneInitiators = new();
         public static IModHelper StaticHelper = null!;
-        private static bool _isInvincibilityAppliedByThisMod = false;
 
         private static IMonitor _monitor = null!;
         private static ModConfig _config = null!;
@@ -49,7 +48,6 @@ namespace FairMultiplayerCutsceneExperience
             helper.Events.Multiplayer.PeerConnected += OnPeerConnected;
             helper.Events.Multiplayer.PeerDisconnected += OnPeerDisconnected;
             helper.Events.GameLoop.GameLaunched += OnGameLaunched;
-            helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
 
             helper.ConsoleCommands.Add("reset", helper.Translation.Get("command.resetCommandDescription"),
                 ResetConsoleCommand);
@@ -60,22 +58,6 @@ namespace FairMultiplayerCutsceneExperience
                 name => helper.Translation.Get("command.resetCommandDescription"),
                 cheatsOnly: false
             );
-        }
-
-        private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
-        {
-            if (Context.IsWorldReady && e.IsMultipleOf(60))
-            {
-                bool isInvincible = Game1.player.temporarilyInvincible;
-                bool isFlashing = Game1.player.flashDuringThisTemporaryInvincibility;
-                int timer = Game1.player.temporaryInvincibilityTimer;
-                int duration = Game1.player.currentTemporaryInvincibilityDuration;
-
-                string debugMessage =
-                    $"[DEBUG] Inv: {isInvincible} | Flash: {isFlashing} | Timer: {timer} | Duration: {duration}";
-
-                Game1.chatBox.addMessage(debugMessage, Color.Violet);
-            }
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
